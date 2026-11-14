@@ -53,7 +53,9 @@ BaseDialog::BaseDialog(wxWindow* parent, const std::string& title, long style)
 }
 
 void BaseDialog::SetInitialSize() {
-  wxDisplay display(wxDisplay::GetFromWindow(this));
+  // GetFromWindow returns wxNOT_FOUND if the window has no display (yet);
+  // wxDisplay(const wxWindow*) then falls back to the primary display.
+  wxDisplay display(this);
   wxRect rect(display.GetGeometry());
   GUI::Breakpoint breakpoint(GUI::GetScreenSize(&rect));
 

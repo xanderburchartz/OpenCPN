@@ -28,6 +28,9 @@
 #ifndef _COLORTYPES_H_
 #define _COLORTYPES_H_
 
+#include <wx/colour.h>
+#include <wx/hashmap.h>  // WX_DECLARE_STRING_HASH_MAP; wx 3.3 no longer pulls this in
+
 typedef struct _S52color {
   char colName[20];
   unsigned char R;

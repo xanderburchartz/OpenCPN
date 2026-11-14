@@ -4377,7 +4377,7 @@ void options::CreatePanel_Units(size_t parent, int border_size,
                     labelFlags);
     wxString pDistanceFormats[kNumDistanceFormats];
     for (int i = 0; i < kNumDistanceFormats; i++) {
-      pDistanceFormats[i] = kDistanceFormats[i].label;
+      pDistanceFormats[i] = wxGetTranslation(kDistanceFormats[i].label);
     }
     int m_DistanceFormatsNChoices = kNumDistanceFormats;
     pDistanceFormat =
@@ -4594,7 +4594,7 @@ void options::CreatePanel_Units(size_t parent, int border_size,
                     labelFlags);
     wxString pDistanceFormats[kNumDistanceFormats];
     for (int i = 0; i < kNumDistanceFormats; i++) {
-      pDistanceFormats[i] = kDistanceFormats[i].label;
+      pDistanceFormats[i] = wxGetTranslation(kDistanceFormats[i].label);
     }
     int m_DistanceFormatsNChoices = kNumDistanceFormats;
     pDistanceFormat = new wxChoice(panelUnits, ID_DISTANCEUNITSCHOICE,

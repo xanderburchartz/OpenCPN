@@ -7098,7 +7098,9 @@ int s52plib::RenderMPS(ObjRazRules *rzRules, Rules *rules) {
 
 int s52plib::RenderCARC(ObjRazRules *rzRules, Rules *rules) {
 #ifdef ocpnUSE_GL
-  if (m_useGLSL)
+  // m_useGLSL is set as soon as the GL options are set, also when drawing with
+  // a DC (raster path). The GLSL route has no DC branch.
+  if (m_useGLSL && !m_pdc)
     return RenderCARC_GLSL(rzRules, rules);
   else
 #endif
