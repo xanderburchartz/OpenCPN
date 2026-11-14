@@ -45,6 +45,7 @@
 #include <wx/tokenzr.h>
 #include <wx/textfile.h>
 #include <wx/filename.h>
+#include <wx/app.h>  // iOS: wxTheApp->CallAfter
 
 #include <wx/listimpl.cpp>
 
