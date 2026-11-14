@@ -130,6 +130,9 @@
 #include "navutil.h"
 #include "ocpn_aui_manager.h"
 #include "ocpn_frame.h"
+#ifdef __OCPN__IOS__
+#include "model/ios_hooks.h"
+#endif
 #include "ocpn_platform.h"
 #include "ocpn_plugin.h"
 #include "o_senc.h"
@@ -260,6 +263,10 @@ static bool LoadAllPlugIns(bool load_enabled) {
 static void LaunchLocalHelp() {
 #ifdef __ANDROID__
   androidLaunchHelpView();
+#elif defined(__OCPN__IOS__)
+  // iOS: Safari cannot open files from the app bundle. The local help
+  // (doc/help_web.html) only links to the website; open that directly.
+  wxLaunchDefaultBrowser("https://opencpn.org/");
 #else
   wxString def_lang_canonical = "en_US";
 
@@ -839,6 +846,7 @@ void MyFrame::StartRebuildChartDatabase() {
   if (ChartDirArray.GetCount()) {
     //              Create and Save a new Chart Database based on the hints
     //              given in the config file
+#ifndef __OCPN__IOS__  // iOS: the progress dialog below is enough.
     if (g_NeedDBUpdate == 1) {
       wxString msg1(
           _("OpenCPN needs to update the chart database from config file "
@@ -848,7 +856,17 @@ void MyFrame::StartRebuildChartDatabase() {
                              wxICON_INFORMATION | wxOK);
       mdlg.ShowModal();
     }
+#endif
 
+#ifdef __OCPN__IOS__
+    // iOS: stop running motion (drag inertia) before the old database is gone;
+    // see ChartCanvas::OnChartDragInertiaTimer.
+    for (unsigned int i = 0; i < g_canvasArray.GetCount(); i++)
+      if (g_canvasArray.Item(i)) {
+        g_canvasArray.Item(i)->StopMovement();
+        g_canvasArray.Item(i)->StopDragInertia();
+      }
+#endif
     delete ChartData;
     ChartData = new ChartDB();
 
@@ -988,6 +1006,9 @@ void MyFrame::SetAndApplyColorScheme(ColorScheme cs) {
       user_colors::GetMapByScheme(SchemeName.ToStdString());
 
   SetSystemColors(cs);
+#ifdef __OCPN__IOS__
+  ocpnios_ApplySchemeColors(this);
+#endif
 
   // ..For each canvas...
   for (unsigned int i = 0; i < g_canvasArray.GetCount(); i++) {
@@ -1003,6 +1024,14 @@ void MyFrame::SetAndApplyColorScheme(ColorScheme cs) {
   if (pWayPointMan)
     WayPointmanGui(*pWayPointMan)
         .SetColorScheme(cs, g_Platform->GetDisplayDPmm());
+#ifdef __OCPN__IOS__
+  // iOS: SetColorScheme above recreates the mark icon image list and deletes
+  // the old one, but the mark list in the Route & Mark Manager kept the old
+  // one. On the next scheme change iOS redraws all windows
+  // (ocpnios_ApplySchemeColors) and read that list from freed memory: crash.
+  // Reattach the list.
+  if (pRouteManagerDialog) pRouteManagerDialog->UpdateWptListCtrl();
+#endif
   if (ChartData) ChartData->ApplyColorSchemeToCachedCharts(cs);
 
   if (g_options) {
@@ -2020,9 +2049,19 @@ void MyFrame::OnIconize(wxIconizeEvent &event) {
 #endif
 }
 
+#ifdef __OCPN__IOS__
+void MyFrame::OnSize(wxSizeEvent &event) { IosOnSize(); }  // frame_ios.cpp
+#else
 void MyFrame::OnSize(wxSizeEvent &event) { ODoSetSize(); }
+#endif
 
 void MyFrame::ODoSetSize() {
+#ifdef __OCPN__IOS__
+  // iOS: building the status bar below resizes the frame again; a nested call
+  // crashed. IosOnSize handles the new size afterwards.
+  if (m_iosInSetSize) return;
+  m_iosInSetSize = true;
+#endif
   int x, y;
   GetClientSize(&x, &y);
   //      Resize the children
@@ -2103,7 +2142,7 @@ void MyFrame::ODoSetSize() {
     font_size =
         wxMax(font_size, min_font_size);  // minimum to stop it being unreadable
 
-#ifdef __ANDROID__
+#if defined(__ANDROID__) || defined(__OCPN__IOS__)
     font_size = statusBarFont->GetPointSize();
 #endif
 
@@ -2126,6 +2165,13 @@ void MyFrame::ODoSetSize() {
     m_pStatusBar->SetMinHeight(min_height);
 //        qDebug() <<"StatusBar min height:" << min_height << "StatusBar font
 //        points:" << pstat_font->GetPointSize();
+#endif
+#ifdef __OCPN__IOS__
+    // iOS: height matching the font, and a light background. The status bar
+    // sits at the bottom near the home indicator, where the background is
+    // black; black text was invisible there.
+    m_pStatusBar->SetMinHeight(pstat_font->GetPointSize() + 10);
+    ocpnios_ApplySchemeColors(this);
 #endif
     //        wxString msg;
     //        msg.Printf(_T("StatusBar min height: %d    StatusBar font points:
@@ -2150,6 +2196,12 @@ void MyFrame::ODoSetSize() {
     g_MainToolbar->SetGeometry(GetPrimaryCanvas()->GetCompass()->IsShown(),
                                GetPrimaryCanvas()->GetCompass()->GetRect());
     g_MainToolbar->Realize();
+#ifdef __OCPN__IOS__
+    // iOS: also reposition after rotation (centered in landscape, clear of the
+    // rounded corners; see ocpnFloatingToolbarDialog::SetDefaultPosition).
+    g_MainToolbar->SetDefaultPosition();
+    g_MainToolbar->Realize();
+#endif
 
     if (szBefore != g_MainToolbar->GetToolbarSize())
       g_MainToolbar->RefreshToolbar();
@@ -2194,6 +2246,9 @@ void MyFrame::ODoSetSize() {
   }
 
   if (g_pauimgr) g_pauimgr->Update();
+#ifdef __OCPN__IOS__
+  m_iosInSetSize = false;
+#endif
 }
 
 void MyFrame::PositionConsole() {
@@ -2875,7 +2930,12 @@ void MyFrame::ScheduleReconfigAndSettingsReload(bool reload, bool new_dialog) {
       if (i < pathArray.GetCount())
         index_hint = ChartData->FinddbIndex(pathArray.Item(i));
       cc->canvasChartsRefresh(index_hint);
+#ifdef __OCPN__IOS__
+      if (index_hint != -1)
+        cc->SetVPScale(restoreScale[i] * cc->GetDisplayScale());
+#else
       if (index_hint != -1) cc->SetVPScale(restoreScale[i]);
+#endif
     }
   }
 }
@@ -3557,6 +3617,14 @@ void MyFrame::BuildMenuBar() {
       g_bTempShowMenuBar)  // allows pressing alt to temporarily show
     showMenuBar = true;
 #endif
+#ifdef __OCPN__IOS__
+  // iOS: no desktop menu bar. Almost everything is also on the toolbar, zoom
+  // buttons, compass, ≡ panel or long-press menu; the few unique items moved
+  // there
+  // ("Drop Mark at Boat", display and AIS toggles, Help). Like the Android
+  // build, which shows no menu bar either.
+  showMenuBar = false;
+#endif
 
   if (showMenuBar) {
     //  Menu bar has some dependencies on S52 PLIB, so be sure it is loaded.
@@ -4095,7 +4163,13 @@ void MyFrame::DoOptionsDialog() {
       }
 
       pathArray.Add(chart_file_name);
+#ifdef __OCPN__IOS__
+      // iOS: store the scale in logical pixels; the pixel factor differs
+      // between GL (Retina) and the raster path (1), see below.
+      restoreScale[i] = cc->GetVPScale() / cc->GetDisplayScale();
+#else
       restoreScale[i] = cc->GetVPScale();
+#endif
     }
   }
 
@@ -4174,6 +4248,9 @@ void MyFrame::ProcessOptionsDialog(int rr, ArrayOfCDI *pNewDirArray) {
     //      This will allow all charts to recognise new OpenGL configuration, if
     //      any
     b_need_refresh = true;
+#ifdef __OCPN__IOS__
+    IosRescaleCanvases();  // app/ios/frame_ios.cpp
+#endif
   }
 
   if (rr & S52_CHANGED) {
@@ -4807,6 +4884,9 @@ void MyFrame::OnInitTimer(wxTimerEvent &event) {
     default: {
       // Last call....
       wxLogMessage("OnInitTimer...Last Call");
+#ifdef __OCPN__IOS__
+      ocpnios_OnStartupDone();  // app/ios/frame_ios.cpp
+#endif
 
       if (!g_kiosk_startup) g_pi_manager->CallLateInit();
 
@@ -6117,6 +6197,15 @@ void MyFrame::DoPrint(void) {
   } else
 #endif
     Refresh();
+#ifdef __OCPN__IOS__
+  // iOS: without a print dialog there is no event loop iteration between
+  // Refresh() and printing; the chart without toolbar was not drawn yet, so the
+  // toolbar and buttons ended up in the PDF. Redraw directly here.
+  if (GetPrimaryCanvas()) {
+    GetPrimaryCanvas()->Refresh(false);
+    GetPrimaryCanvas()->Update();
+  }
+#endif
 
   ChartPrintout printout;
   if (g_bopengl) {
@@ -6883,7 +6972,11 @@ ocpnToolBarSimple *MyFrame::CreateMasterToolbar() {
   tic = new ToolbarItemContainer(
       ID_MENU_ROUTE_NEW, style->GetToolIcon("MUI_route", TOOLICON_NORMAL),
       style->GetToolIcon("MUI_route", TOOLICON_TOGGLED), wxITEM_CHECK,
+#ifdef __OCPN__IOS__  // iOS: no keyboard shortcuts in labels on a phone
+      wxString(_("Create Route")), "MUI_route");
+#else
       wxString(_("Create Route")) << " (Ctrl-R)", "MUI_route");
+#endif
 
   g_MainToolbar->AddToolItem(tic);
 
@@ -6927,7 +7020,11 @@ ocpnToolBarSimple *MyFrame::CreateMasterToolbar() {
   //  And finally add the MOB tool
   tic = new ToolbarItemContainer(
       ID_MOB, style->GetToolIcon("mob_btn", TOOLICON_NORMAL), wxITEM_NORMAL,
+#ifdef __OCPN__IOS__
+      wxString(_("Drop MOB Marker")), "mob_btn");
+#else
       wxString(_("Drop MOB Marker")) << _(" (Ctrl-Space)"), "mob_btn");
+#endif
   g_MainToolbar->AddToolItem(tic);
 
   // Build the toolbar
@@ -7299,6 +7396,9 @@ void ApplyLocale() {
   }
 
   if (!bno_load) g_pauimgr->LoadPerspective(perspective, false);
+#ifdef __OCPN__IOS__
+  ocpnios_FloatPluginPanes(g_pauimgr);
+#endif
 
   g_pauimgr->Update();
 
