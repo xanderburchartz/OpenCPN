@@ -990,6 +990,11 @@ void wmm_pi::SendBoatVarHVD(double d_var) {
 }
 
 void wmm_pi::SendPGN127258(double d_var) {
+#ifdef __OCPN__IOS__
+  // iOS: send nothing to the NMEA 2000 bus unprompted. The variation stays
+  // available inside OpenCPN through HVD.
+  return;
+#endif
   // Send Magnetic Variation as PGN 127258 Magnetic Variation
   double var_rad = d_var * (M_PI / 180.0);
   // Calculate the number of days since the Unix epoch
