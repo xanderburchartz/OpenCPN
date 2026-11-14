@@ -73,6 +73,10 @@
 #include "chartdb.h"
 #include "chartimg.h"
 #include "chcanv.h"
+#ifdef __OCPN__IOS__
+int ocpnios_OverlayInsetLeft();  // app/ios/window_fit.cpp: safe area (points)
+int ocpnios_OverlayInsetRight();
+#endif
 #include "ch_info_win.h"
 #include "cm93.h"  // for chart outline draw
 #include "compass.h"
@@ -480,6 +484,9 @@ ChartCanvas::ChartCanvas(wxFrame *frame, int canvasIndex, wxWindow *nmea_log)
   m_canvas_scale_factor = 1.;
 
   m_canvas_width = 1000;
+#ifdef __OCPN__IOS__
+  m_canvas_height = 1000;  // iOS: was uninitialized; SetViewPoint reads it
+#endif
 
   m_overzoomTextWidth = 0;
   m_overzoomTextHeight = 0;
@@ -642,17 +649,43 @@ ChartCanvas::ChartCanvas(wxFrame *frame, int canvasIndex, wxWindow *nmea_log)
 #if defined(__WXOSX__) || defined(__WXGTK3__)
   // Support scaled HDPI displays.
   m_displayScale = GetContentScaleFactor();
+#elif defined(__OCPN__IOS__)
+  // iOS: Retina scaling only in the GL path. The raster path draws into wx
+  // bitmaps in logical units; with physical pix_width (x3) the ENC renderer
+  // wrote outside the buffer and only part of the chart was visible.
+  if (g_bopengl) m_displayScale = GetContentScaleFactor();
 #endif
   VPoint.SetPixelScale(m_displayScale);
 
 #ifdef HAVE_WX_GESTURE_EVENTS
   // if (!m_glcc)
   {
+#ifdef __OCPN__IOS__
+    // iOS: no wx long-press gesture. The iOS touch filter
+    // (app/ios/pinch_zoom.cpp) already turns a long press into wxEVT_RIGHT_DOWN
+    // at the right spot. The wx gesture (QTapAndHoldGesture) reported a stale
+    // position (from an earlier tap), so the menu missed the route under the
+    // finger ("Activate" was missing); it also aborted the touch and sometimes
+    // showed the menu twice.
+    if (!EnableTouchEvents(wxTOUCH_ZOOM_GESTURE)) {
+#else
     if (!EnableTouchEvents(wxTOUCH_ZOOM_GESTURE | wxTOUCH_PRESS_GESTURES)) {
+#endif
       wxLogError("Failed to enable touch events");
     }
 
     // Bind(wxEVT_GESTURE_ZOOM, &ChartCanvas::OnZoom, this);
+#ifdef __OCPN__IOS__
+    // iOS: wxQt turns QPinchGesture into wxZoomGestureEvent; Android uses its
+    // own events in the GL path for this, which do not exist on iOS (raster
+    // path).
+    Bind(wxEVT_GESTURE_ZOOM, &ChartCanvas::OnZoom, this);
+    // iOS: with gesture events enabled, EVT_MOUSE_EVENTS in the event table no
+    // longer receives double clicks (AIS info, opening a mark). The iOS touch
+    // filter (app/ios/pinch_zoom.cpp) turns a double tap into
+    // wxEVT_LEFT_DCLICK; bind it to MouseEvent here.
+    Bind(wxEVT_LEFT_DCLICK, &ChartCanvas::MouseEvent, this);
+#endif
 
     Bind(wxEVT_LONG_PRESS, &ChartCanvas::OnLongPress, this);
     Bind(wxEVT_PRESS_AND_TAP, &ChartCanvas::OnPressAndTap, this);
@@ -941,7 +974,11 @@ void ChartCanvas::OnKillFocus(wxFocusEvent &WXUNUSED(event)) {
   //  starting a timer if required to actually Finish() a route on a legitimate
   //  focus change, but not if the focus is quickly regained ( <20 msec.) on
   //  this canvas.
-#ifdef __WXOSX__
+#if defined(__OCPN__IOS__)
+  // iOS: don't finish a route on focus loss. On iOS the focus moves when the
+  // context menu closes and when the toolbar is tapped, which stopped "New
+  // Route..." at once. Finishing goes through the menu or the toolbar.
+#elif defined(__WXOSX__)
   if (m_routeState && m_FinishRouteOnKillFocus)
     m_routeFinishTimer.Start(20, wxTIMER_ONE_SHOT);
 #else
@@ -1110,6 +1147,9 @@ void ChartCanvas::OnMotion(wxMouseEvent &event) {
 }
 
 void ChartCanvas::OnZoom(wxZoomGestureEvent &event) {
+#ifdef __OCPN__IOS__
+  IosOnZoom(event);  // iOS pinch zoom, app/ios/canvas_ios.cpp
+#else
   /* there are spurious end zoom events upon right-click */
   if (event.IsGestureEnd()) return;
 
@@ -1132,6 +1172,7 @@ void ChartCanvas::OnZoom(wxZoomGestureEvent &event) {
     PanCanvas(-delta.x, -delta.y);
     m_zoomStartPoint = event.GetPosition();
   }
+#endif
 }
 
 void ChartCanvas::OnWheel(wxMouseEvent &event) { MouseEvent(event); }
@@ -1227,6 +1268,12 @@ void ChartCanvas::SetShowGPS(bool bshow) {
     m_Compass = new ocpnCompass(this, bshow);
     m_Compass->SetScaleFactor(g_compass_scalefactor);
     m_Compass->Show(m_bShowCompassWin && g_bShowCompassWin);
+#ifdef __OCPN__IOS__
+    // iOS: the new compass sits at (0,0) until the next periodic update; after
+    // startup it stayed at the top left for ~10 s.
+    m_ocpnios_compass_cs = 0;
+    UpdateGPSCompassStatusBox(true);
+#endif
   }
   m_bShowGPS = bshow;
 }
@@ -3489,6 +3536,9 @@ void ChartCanvas::StartChartDragInertia() {
     yacc += m_drag_vec_y.at(length - 1 - i);
     tacc += m_drag_vec_t.at(length - 1 - i);
   }
+#ifdef __OCPN__IOS__
+  if (IosClampDragTime(n_vel, tacc)) return;  // app/ios/canvas_ios.cpp
+#endif
 
   if (tacc == 0) return;
 
@@ -3503,6 +3553,9 @@ void ChartCanvas::StartChartDragInertia() {
 
   m_chart_drag_velocity_x = drag_velocity_x;
   m_chart_drag_velocity_y = drag_velocity_y;
+#ifdef __OCPN__IOS__
+  IosCapDragVelocity(n_vel, tacc);  // app/ios/canvas_ios.cpp
+#endif
 
   m_chart_drag_inertia_active = true;
   // First callback as fast as possible.
@@ -3511,6 +3564,18 @@ void ChartCanvas::StartChartDragInertia() {
 
 void ChartCanvas::OnChartDragInertiaTimer(wxTimerEvent &event) {
   if (!m_chart_drag_inertia_active) return;
+#ifdef __OCPN__IOS__
+  // iOS: no inertia while the chart database is being (re)built. That happens
+  // after every install, with a progress dialog that keeps processing events;
+  // the quilt then referenced a freed cm93 chart (crash in
+  // cm93compchart::GetNativeScale from this timer).
+  if (!ChartData || ChartData->IsBusy() || !ChartData->IsValid()) {
+    m_chart_drag_inertia_timer.Stop();
+    m_chart_drag_inertia_active = false;
+    return;
+  }
+#endif
+
   // Calculate time fraction from 0..1
   wxLongLong now = wxGetLocalTimeMillis();
   double elapsed = (now - m_chart_drag_inertia_start_time).ToDouble();
@@ -4721,6 +4786,15 @@ void ChartCanvas::DoZoomCanvas(double factor, bool can_zoom_to_cursor) {
 
   //    Cannot allow Yield() re-entrancy here
   if (m_bzooming) return;
+#ifdef __OCPN__IOS__
+  // iOS: a running jump animation (StartSmoothJump, after tapping the own-ship
+  // button) resets the scale to the scale at the time of the tap every 16 ms.
+  // Zooming during those 600 ms was undone or jumped back and forth.
+  if (m_animationActive) {
+    m_easeTimer.Stop();
+    m_animationActive = false;
+  }
+#endif
   m_bzooming = true;
 
   double old_ppm = GetVP().view_scale_ppm;
@@ -5446,6 +5520,9 @@ bool ChartCanvas::SetViewPoint(double lat, double lon, double scale_ppm,
                                double skew, double rotation, int projection,
                                bool b_adjust, bool b_refresh) {
   if (ChartData->IsBusy()) return false;
+#ifdef __OCPN__IOS__
+  IosClampViewPoint(lat, scale_ppm, projection);  // app/ios/canvas_ios.cpp
+#endif
   bool b_ret = false;
   if (skew > PI) /* so our difference tests work, put in range of +-Pi */
     skew -= 2 * PI;
@@ -6781,6 +6858,9 @@ void ChartCanvas::ScaleBarDraw(ocpnDC &dc) {
     double blat, blon, tlat, tlon;
 
     int x_origin = 5.0 * GetPixPerMM();
+#ifdef __OCPN__IOS__
+    x_origin += ocpnios_OverlayInsetLeft() * m_displayScale;  // rounded corner
+#endif
     int chartbar_height = GetChartbarHeight();
     //         ocpnStyle::Style* style = g_StyleManager->GetCurrentStyle();
     //         if (style->chartStatusWindowTransparent)
@@ -7132,9 +7212,11 @@ void ChartCanvas::OnSize(wxSizeEvent &event) {
   // GetClientSize returns the size of the canvas area in logical pixels.
   GetClientSize(&m_canvas_width, &m_canvas_height);
 
-#ifdef __WXOSX__
+#if defined(__WXOSX__)
   // Support scaled HDPI displays.
   m_displayScale = GetContentScaleFactor();
+#elif defined(__OCPN__IOS__)
+  IosOnSizeScale();  // app/ios/canvas_ios.cpp
 #endif
 
   // Convert to physical pixels.
@@ -7155,6 +7237,15 @@ void ChartCanvas::OnSize(wxSizeEvent &event) {
   m_absolute_min_scale_ppm =
       m_canvas_width /
       (1.2 * WGS84_semimajor_axis_meters * PI);  // something like 180 degrees
+#ifdef __OCPN__IOS__
+  // iOS: on a portrait screen (height 2x width) a width-based limit allowed
+  // zooming out so far that the height extended past the poles. Mercator y goes
+  // to infinity there; the basemap got pixel coordinates of 10 million and Qt
+  // filled the whole screen with land color (stripes) or nothing. Base the
+  // limit on the larger side.
+  m_absolute_min_scale_ppm = wxMax(m_canvas_width, m_canvas_height) /
+                             (1.2 * WGS84_semimajor_axis_meters * PI);
+#endif
 
   //  Inform the parent Frame that I am being resized...
   top_frame::Get()->ProcessCanvasResize();
@@ -7788,7 +7879,14 @@ void ChartCanvas::MouseTimedEvent(wxTimerEvent &event) {
 bool leftIsDown;
 
 bool ChartCanvas::MouseEventOverlayWindows(wxMouseEvent &event) {
+#ifdef __OCPN__IOS__
+  // iOS: toolbar, compass and zoom buttons are drawn over the chart. With the
+  // upstream condition, taps on them while drawing a route went to the chart
+  // and became route points; the route button to finish the route did not work.
+  if (!m_bChartDragging) {
+#else
   if (!m_bChartDragging && !m_bDrawingRoute) {
+#endif
     /*
      * The m_Compass->GetRect() coordinates are in physical pixels, whereas the
      * mouse event coordinates are in logical pixels.
@@ -11400,6 +11498,13 @@ wxString ChartCanvas::FinishRoute() {
 }
 
 void ChartCanvas::HideGlobalToolbar() {
+#ifdef __OCPN__IOS__
+  // iOS: keep the toolbar visible while creating a route. When hidden, only the
+  // menu button remained; tapping it placed a route point instead of opening
+  // the toolbar, and the route button to finish the route was unreachable.
+  // (Android has its own route indicator for this.)
+  return;
+#endif
   if (m_canvasIndex == 0) {
     m_last_TBviz = top_frame::Get()->SetGlobalToolbarViz(false);
   }
@@ -12221,6 +12326,11 @@ void ChartCanvas::OnPaint(wxPaintEvent &event) {
               m_pQuilt->RenderQuiltRegionViewOnDCNoText(temp_dc, svp,
                                                         update_region);
               cache_dc.SelectObject(wxNullBitmap);
+#ifdef __OCPN__IOS__
+              // iOS: redraw all if the chart coverage changed (canvas_ios.cpp).
+              IosRedrawNewCoverage(temp_dc, svp, chart_get_region,
+                                   update_region, dx, dy);
+#endif
             } else {
               //    No sensible (dx, dy) change in the view, so use the cached
               //    member bitmap
@@ -12264,6 +12374,9 @@ void ChartCanvas::OnPaint(wxPaintEvent &event) {
 
         m_bm_cache_vp =
             VPoint;  // save the ViewPort associated with the cached wxBitmap
+#ifdef __OCPN__IOS__
+        m_ocpnios_cache_rendered = m_pQuilt->GetFullQuiltRenderedRegion();
+#endif
       }
     }
 
@@ -13110,6 +13223,10 @@ emboss_data *ChartCanvas::EmbossDepthScale() {
   }
 
   ped->x = (GetVP().pix_width - ped->width);
+#ifdef __OCPN__IOS__
+  // iOS: keep the depth unit ("Meters") clear of the rounded top-right corner.
+  ped->x -= ocpnios_OverlayInsetRight() * m_displayScale;
+#endif
 
   if (m_Compass && m_bShowCompassWin && g_bShowCompassWin) {
     wxRect r = m_Compass->GetRect();
@@ -13119,6 +13236,18 @@ emboss_data *ChartCanvas::EmbossDepthScale() {
   }
   return ped;
 }
+
+#ifdef __OCPN__IOS__
+// iOS: embossed texts (depth unit "Meters", "OverZoom") have a fixed font size
+// (style: 30 pt). On an iPhone (440 pt wide) "Meters" covered half the chart
+// width and overlapped the chart text. Scale to the chart width, with a 1200 pt
+// monitor as reference; never larger than the original.
+static void OcpnIosScaleEmbossFont(wxFont &font, int canvasWidth) {
+  if (canvasWidth <= 0) return;
+  const double f = std::min(1.0, canvasWidth / 1200.0);
+  font.SetPointSize(std::max(10, (int)(font.GetPointSize() * f + 0.5)));
+}
+#endif
 
 void ChartCanvas::CreateDepthUnitEmbossMaps(ColorScheme cs) {
   ocpnStyle::Style *style = g_StyleManager->GetCurrentStyle();
@@ -13132,6 +13261,9 @@ void ChartCanvas::CreateDepthUnitEmbossMaps(ColorScheme cs) {
     font = wxFont(style->embossHeight, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL,
                   wxFONTWEIGHT_BOLD, false, style->embossFont);
 
+#ifdef __OCPN__IOS__
+  OcpnIosScaleEmbossFont(font, GetClientSize().x);
+#endif
   int emboss_width = 500;
   int emboss_height = 200;
 
@@ -13165,6 +13297,9 @@ void ChartCanvas::SetOverzoomFont() {
     font = wxFont(style->embossHeight, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL,
                   wxFONTWEIGHT_BOLD, false, style->embossFont);
 
+#ifdef __OCPN__IOS__
+  OcpnIosScaleEmbossFont(font, GetClientSize().x);
+#endif
   wxClientDC dc(this);
   dc.SetFont(font);
   dc.GetTextExtent(OVERZOOM_TEXT, &w, &h);
@@ -14340,6 +14475,9 @@ void ChartCanvas::UpdateGPSCompassStatusBox(bool b_force_new) {
   //    Look for change in overlap or positions
   bool b_update = false;
   int cc1_edge_comp = 2;
+#ifdef __OCPN__IOS__
+  IosUpdateCompassScale(b_update);  // app/ios/canvas_ios.cpp
+#endif
   wxRect rect = m_Compass->GetRect();
   wxSize parent_size = GetSize();
 
@@ -14349,6 +14487,10 @@ void ChartCanvas::UpdateGPSCompassStatusBox(bool b_force_new) {
   // right)
   wxPoint compass_pt(parent_size.x - rect.width - cc1_edge_comp,
                      g_StyleManager->GetCurrentStyle()->GetCompassYOffset());
+#ifdef __OCPN__IOS__
+  // iOS: keep the compass clear of the rounded top-right screen corner.
+  compass_pt.x -= ocpnios_OverlayInsetRight() * m_displayScale;
+#endif
   wxRect compass_rect(compass_pt, rect.GetSize());
 
   m_Compass->Move(compass_pt);
@@ -14360,6 +14502,14 @@ void ChartCanvas::UpdateGPSCompassStatusBox(bool b_force_new) {
   scaler = wxMax(scaler, 1.0);
   wxPoint note_point = wxPoint(
       parent_size.x - (scaler * 20 * wxWindow::GetCharWidth()), compass_rect.y);
+#ifdef __OCPN__IOS__
+  // iOS: on a narrow screen the bell overlapped the (shifted and enlarged)
+  // compass, which then got the tap. Place the bell directly left of the
+  // compass.
+  if (m_notification_button)
+    note_point.x = compass_rect.x - m_notification_button->GetRect().width -
+                   4 * m_displayScale;
+#endif
   if (m_notification_button) {
     m_notification_button->Move(note_point);
     m_notification_button->UpdateStatus();
