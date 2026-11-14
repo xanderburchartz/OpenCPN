@@ -2366,6 +2366,9 @@ int S57Reader::ApplyUpdates(DDFModule *poUpdateModule, int iUpdate)
       /* Check for canceled cell */;
       char *u = (char *)(poRecord->GetStringSubfield("DSID", 0, "EDTN", 0));
       if (!strncmp(u, "0", 1)) {
+        // Record the reason; s57chart writes it to opencpn.log.
+        CPLError(CE_Warning, CPLE_AppDefined,
+                 "Update %d cancels this cell (DSID EDTN=0).", iUpdate);
         return BAD_UPDATE;
       }
     }
