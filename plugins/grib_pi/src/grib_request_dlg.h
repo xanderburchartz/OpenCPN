@@ -275,6 +275,9 @@ protected:
 private:
   void HighlightArea(double latmax, double lonmax, double latmin,
                      double lonmin);
+#ifdef __OCPN__IOS__
+  void SetCompactLayout();
+#endif
   void ReadLocalCatalog();
   void ReadWorldModels();
   int FindWorldModel(const wxString &name);

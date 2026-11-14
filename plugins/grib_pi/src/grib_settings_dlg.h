@@ -160,6 +160,9 @@ protected:
   void OnSpacingModeChange(wxCommandEvent& event) override;
   void OnPageChange(wxNotebookEvent& event) override;
   void OnCtrlandDataStyleChanged(wxCommandEvent& event) override;
+#ifdef __OCPN__IOS__
+  void SetCompactLayout();
+#endif
 
 private:
   void SetDataTypeSettings(int settings);
