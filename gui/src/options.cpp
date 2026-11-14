@@ -166,6 +166,11 @@ static inline wxString ttCoordFormat() {
 #include <QtWidgets/QScroller>
 #endif
 
+#ifdef __OCPN__IOS__
+#include <QtWidgets/QHeaderView>
+#include <QtWidgets/QTreeView>
+#endif
+
 #ifdef __WXOSX__
 #if wxCHECK_VERSION(3, 2, 0)
 #define SLIDER_STYLE wxSL_HORIZONTAL | wxSL_AUTOTICKS | wxSL_LABELS
@@ -385,6 +390,9 @@ EVT_PAINT(OCPNChartDirPanel::OnPaint)
 EVT_SIZE(OCPNChartDirPanel::OnSize)
 END_EVENT_TABLE()
 
+#ifdef __OCPN__IOS__
+#include "model/ios_hooks.h"
+#endif
 OCPNChartDirPanel::OCPNChartDirPanel(wxWindow* parent, wxWindowID id,
                                      const wxPoint& pos, const wxSize& size,
                                      ChartDirInfo& cdi)
@@ -395,6 +403,13 @@ OCPNChartDirPanel::OCPNChartDirPanel(wxWindow* parent, wxWindowID id,
   if (cdi.fullpath.StartsWith(
           "/storage/emulated/0/Android/data/org.opencpn.opencpn/files"))
     m_pChartDir = "..." + cdi.fullpath.Mid(58);
+#ifdef __OCPN__IOS__
+  // iOS: likewise for the app container
+  // (.../Containers/Data/Application/<id>/): show it like the Files app,
+  // "OpenCPN › Charts › …" (app/ios/display_path.cpp). Display only; m_cdi
+  // keeps the real path.
+  m_pChartDir = ocpnios_DisplayPath(cdi.fullpath);
+#endif
 
   m_cdi = cdi;
   m_bSelected = false;
@@ -1224,7 +1239,16 @@ MMSI_Props_Panel::MMSI_Props_Panel(wxWindow* parent)
   m_pButtonNew->Connect(wxEVT_COMMAND_BUTTON_CLICKED,
                         wxCommandEventHandler(MMSI_Props_Panel::OnNewButton),
                         NULL, this);
+#ifdef __OCPN__IOS__
+  // iOS: full-width button below the list (right-aligned with a fixed width of
+  // 200 it was half off screen on iPhone); the list scrolls horizontally, the
+  // page does not.
+  m_pButtonNew->SetMinSize(wxSize(-1, -1));
+  topSizer->Add(m_pButtonNew, 0, wxEXPAND | wxTOP, 10);
+  m_pListCtrlMMSI->SetMinSize(wxSize(100, 12 * GetCharHeight()));
+#else
   topSizer->Add(m_pButtonNew, 0, wxALIGN_RIGHT | wxALL, 0);
+#endif
 
   topSizer->Layout();
 
@@ -2015,14 +2039,30 @@ void options::CreatePanel_Ownship(size_t parent, int border_size,
   radarGrid->Add(m_colourOwnshipRangeRingColour, 0, wxALIGN_RIGHT, border_size);
 
   // ship to active
+#ifdef __OCPN__IOS__
+  // iOS: on one line this row was 625 pt wide (screen 440 pt), making the whole
+  // page wider than the screen and pushing the right-aligned Own ship fields
+  // off screen. Checkbox on its own line, Style and Colour below it in two
+  // columns.
+  wxFlexGridSizer* shipToActiveGrid =
+      new wxFlexGridSizer(0, 2, group_item_spacing, group_item_spacing);
+#else
   wxFlexGridSizer* shipToActiveGrid =
       new wxFlexGridSizer(1, 5, group_item_spacing, group_item_spacing);
+#endif
   shipToActiveGrid->AddGrowableCol(1);
-  dispOptions->Add(shipToActiveGrid, 0, wxALL | wxEXPAND, border_size);
   pShowshipToActive = new wxCheckBox(itemPanelShip, wxID_ANY,
                                      _("Show direction to Active Waypoint"));
+#ifdef __OCPN__IOS__
+  // iOS: switch as its own full-width row (iOS style, switch on the right,
+  // app/ios/fit_width.cpp); Style and Colour below it.
+  dispOptions->Add(pShowshipToActive, 0, wxALL | wxEXPAND, border_size);
+  dispOptions->Add(shipToActiveGrid, 0, wxALL | wxEXPAND, border_size);
+#else
+  dispOptions->Add(shipToActiveGrid, 0, wxALL | wxEXPAND, border_size);
   shipToActiveGrid->Add(pShowshipToActive, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT,
                         border_size);
+#endif
 
   wxStaticText* shipToActiveText1 =
       new wxStaticText(itemPanelShip, wxID_STATIC, _("Style"));
@@ -2094,10 +2134,16 @@ void options::CreatePanel_Ownship(size_t parent, int border_size,
   pTrackDaily = new wxCheckBox(itemPanelShip, ID_DAILYCHECKBOX,
                                _("Automatic Daily Tracks at midnight"));
 
+#ifdef __OCPN__IOS__
+  // iOS: switch as its own row; time and choice (Computer/UTC/LMT) below it.
+  trackSizer->Add(pTrackDaily, 0, wxALL | wxEXPAND, border_size);
+  trackSizer1->Add(0, 0, 1, wxEXPAND, 0);
+#else
   trackSizer1->Add(pTrackDaily, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT,
                    border_size);
 
   trackSizer1->Add(0, 0, 1, wxEXPAND, 0);
+#endif
 
 #if wxUSE_TIMEPICKCTRL
   pTrackDaily->SetLabel(_("Automatic Daily Tracks at"));
@@ -2136,15 +2182,36 @@ void options::CreatePanel_Ownship(size_t parent, int border_size,
 
   trackSizer->Add(trackSizer1, 1, wxEXPAND | wxALL, border_size);
 
+#ifdef __OCPN__IOS__
+  // iOS: the radio buttons on their own row; on one row with the daily track
+  // time it was wider than the screen.
+  wxBoxSizer* trackRadioSizer = new wxBoxSizer(wxHORIZONTAL);
+  for (wxWindow* rb :
+       {pTrackRotateComputerTime, pTrackRotateUTC, pTrackRotateLMT}) {
+    trackSizer1->Detach(rb);
+    trackRadioSizer->Add(rb, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, border_size);
+  }
+  trackSizer->Add(trackRadioSizer, 0, wxALIGN_RIGHT | wxLEFT | wxRIGHT,
+                  border_size);
+  // Highlight and colour in two columns instead of three side by side.
+  wxFlexGridSizer* hTrackGrid =
+      new wxFlexGridSizer(0, 2, group_item_spacing, group_item_spacing);
+#else
   wxFlexGridSizer* hTrackGrid =
       new wxFlexGridSizer(1, 3, group_item_spacing, group_item_spacing);
+#endif
   hTrackGrid->AddGrowableCol(1);
   trackSizer->Add(hTrackGrid, 0, wxALL | wxEXPAND, border_size);
 
   pTrackHighlite =
       new wxCheckBox(itemPanelShip, ID_TRACKHILITE, _("Highlight Tracks"));
+#ifdef __OCPN__IOS__
+  trackSizer->Insert(trackSizer->GetItemCount() - 1, pTrackHighlite, 0,
+                     wxALL | wxEXPAND, border_size);
+#else
   hTrackGrid->Add(pTrackHighlite, 1, wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL,
                   border_size);
+#endif
   wxStaticText* trackColourText =
       new wxStaticText(itemPanelShip, wxID_STATIC, _("Highlight Color"));
   hTrackGrid->Add(trackColourText, 1, wxALIGN_RIGHT | wxALIGN_CENTER_VERTICAL,
@@ -2196,15 +2263,33 @@ void options::CreatePanel_Routes(size_t parent, int border_size,
   m_persist_active_route_chkbox = new wxCheckBox(
       itemPanelRoutes, wxID_ANY,
       _("Persist active route, automatically activate on start up"));
+#ifdef __OCPN__IOS__
+  {  // iOS: long text on two lines (was wider than the screen)
+    wxString lbl = m_persist_active_route_chkbox->GetLabel();
+    for (int i = lbl.length() / 2; i < (int)lbl.length(); i++)
+      if (lbl[i] == ' ') {
+        lbl[i] = '\n';
+        break;
+      }
+    m_persist_active_route_chkbox->SetLabel(lbl);
+  }
+#endif
   activeRouteSizer->Add(m_persist_active_route_chkbox, 0, wxALL, 5);
   Routes->Add(activeRouteSizer, 0, wxGROW | wxALL, border_size);
 
   routeSizer->AddSpacer(5);
 
   // Default ICON
+#ifdef __OCPN__IOS__
+  // iOS: label above the input; side by side was wider than an iPhone.
+  wxFlexGridSizer* routepointiconSelect =
+      new wxFlexGridSizer(0, 1, group_item_spacing, group_item_spacing);
+  routepointiconSelect->AddGrowableCol(0);
+#else
   wxFlexGridSizer* routepointiconSelect =
       new wxFlexGridSizer(1, 2, group_item_spacing, group_item_spacing);
   routepointiconSelect->AddGrowableCol(1);
+#endif
   routeSizer->Add(routepointiconSelect, 0, wxLEFT | wxRIGHT | wxEXPAND,
                   border_size);
 
@@ -2265,9 +2350,15 @@ void options::CreatePanel_Routes(size_t parent, int border_size,
   waypointSizer->AddSpacer(5);
 
   // Default ICON
+#ifdef __OCPN__IOS__
+  wxFlexGridSizer* waypointiconSelect =
+      new wxFlexGridSizer(0, 1, group_item_spacing, group_item_spacing);
+  waypointiconSelect->AddGrowableCol(0);
+#else
   wxFlexGridSizer* waypointiconSelect =
       new wxFlexGridSizer(1, 2, group_item_spacing, group_item_spacing);
   waypointiconSelect->AddGrowableCol(1);
+#endif
   waypointSizer->Add(waypointiconSelect, 0, wxLEFT | wxRIGHT | wxEXPAND,
                      border_size);
 
@@ -2292,9 +2383,15 @@ void options::CreatePanel_Routes(size_t parent, int border_size,
 
   waypointSizer->AddSpacer(5);
   // ScaMin
+#ifdef __OCPN__IOS__
+  wxFlexGridSizer* ScaMinSizer =
+      new wxFlexGridSizer(0, 1, group_item_spacing, group_item_spacing);
+  ScaMinSizer->AddGrowableCol(0);
+#else
   wxFlexGridSizer* ScaMinSizer =
       new wxFlexGridSizer(1, 2, group_item_spacing, group_item_spacing);
   ScaMinSizer->AddGrowableCol(1);
+#endif
   waypointSizer->Add(ScaMinSizer, 0, wxLEFT | wxRIGHT | wxEXPAND, border_size);
   pScaMinChckB =
       new wxCheckBox(itemPanelRoutes, wxID_ANY,
@@ -2303,6 +2400,12 @@ void options::CreatePanel_Routes(size_t parent, int border_size,
   m_pText_ScaMin = new wxTextCtrl(itemPanelRoutes, -1, "TEXTTEXTTEXT");
   ScaMinSizer->Add(m_pText_ScaMin, 0, wxALL | wxALIGN_RIGHT,
                    group_item_spacing);
+#ifdef __OCPN__IOS__
+  // iOS: "no limit" is 2147483646; the field was too narrow for that number,
+  // and the value is only set after layout.
+  m_pText_ScaMin->SetMinSize(
+      wxSize(m_pText_ScaMin->GetTextExtent("2147483646").x * 13 / 10 + 30, -1));
+#endif
 
   wxFlexGridSizer* ScaMaxSizer =
       new wxFlexGridSizer(1, 2, group_item_spacing, group_item_spacing);
@@ -2321,6 +2424,19 @@ void options::CreatePanel_Routes(size_t parent, int border_size,
       new wxCheckBox(itemPanelRoutes, wxID_ANY,
                      _("Override the settings for chartscale based visibility "
                        "and show always"));
+#ifdef __OCPN__IOS__
+  {  // iOS: long text on two lines (was wider than the screen)
+    wxString lbl = pScaMinOverruleChckB->GetLabel();
+    int sp = lbl.Find(' ', true);
+    for (int i = lbl.length() / 2; i < (int)lbl.length(); i++)
+      if (lbl[i] == ' ') {
+        sp = i;
+        break;
+      }
+    if (sp > 0) lbl[sp] = '\n';
+    pScaMinOverruleChckB->SetLabel(lbl);
+  }
+#endif
   waypointSizer->Add(pScaMinOverruleChckB, 0, wxALL, 5);
 
   waypointSizer->AddSpacer(5);
@@ -2484,6 +2600,11 @@ void options::CreatePanel_ChartsLoad(size_t parent, int border_size,
   m_scrollRate = 1;
 #endif
   m_scrollWinChartList->SetScrollRate(m_scrollRate, m_scrollRate);
+#ifdef __OCPN__IOS__
+  // iOS: list white like the surrounding card, without a grey border.
+  m_scrollWinChartList->SetBackgroundColour(*wxWHITE);
+  m_scrollWinChartList->SetWindowStyleFlag(wxBORDER_NONE | wxVSCROLL);
+#endif
 
   boxSizerCharts = new wxBoxSizer(wxVERTICAL);
   m_scrollWinChartList->SetSizer(boxSizerCharts);
@@ -2538,10 +2659,19 @@ void options::CreatePanel_ChartsLoad(size_t parent, int border_size,
 
   wxFlexGridSizer* itemFlexGridSizerUpdate = new wxFlexGridSizer(1);
   itemFlexGridSizerUpdate->SetFlexibleDirection(wxHORIZONTAL);
+#ifdef __OCPN__IOS__
+  // iOS: full-width column, so the switch row (text left, switch right) and the
+  // buttons extend to the edge of the card.
+  itemFlexGridSizerUpdate->AddGrowableCol(0);
+#endif
 
   pScanCheckBox = new wxCheckBox(chartPanelWin, ID_SCANCHECKBOX,
                                  _("Scan Charts and Update Database"));
+#ifdef __OCPN__IOS__
+  itemFlexGridSizerUpdate->Add(pScanCheckBox, 1, wxALL | wxEXPAND, 5);
+#else
   itemFlexGridSizerUpdate->Add(pScanCheckBox, 1, wxALL, 5);
+#endif
 
   pUpdateCheckBox = new wxCheckBox(chartPanelWin, ID_UPDCHECKBOX,
                                    _("Force Full Database Rebuild"));
@@ -2643,8 +2773,14 @@ void options::CreatePanel_Configs(size_t parent, int border_size,
         new wxStaticBox(m_DisplayConfigsPage, wxID_ANY, _("Template Status"));
     m_templateStatusBoxSizer =
         new wxStaticBoxSizer(templateStatusBox, wxHORIZONTAL);
+#ifdef __OCPN__IOS__
+    // iOS: as tall as its content; when empty it was a large grey area.
+    wrapperSizer->Add(m_templateStatusBoxSizer, 0, wxALL | wxEXPAND,
+                      border_size);
+#else
     wrapperSizer->Add(m_templateStatusBoxSizer, 1, wxALL | wxEXPAND,
                       border_size);
+#endif
 
     wxBoxSizer* statSizer = new wxBoxSizer(wxVERTICAL);
     m_templateStatusBoxSizer->Add(statSizer, 0, wxALL | wxEXPAND, border_size);
@@ -2666,17 +2802,33 @@ void options::CreatePanel_Configs(size_t parent, int border_size,
         new wxStaticBox(m_DisplayConfigsPage, wxID_ANY, _("Saved Templates"));
     wxStaticBoxSizer* configSizer =
         new wxStaticBoxSizer(configsBox, wxHORIZONTAL);
+#ifdef __OCPN__IOS__
+    // iOS: as tall as its content (otherwise it filled the rest of the page
+    // white).
+    wrapperSizer->Add(configSizer, 0, wxALL | wxEXPAND, border_size);
+#else
     wrapperSizer->Add(configSizer, 4, wxALL | wxEXPAND, border_size);
+#endif
 
     wxPanel* cPanel = new wxPanel(m_DisplayConfigsPage, wxID_ANY);
+#ifdef __OCPN__IOS__
+    cPanel->SetBackgroundColour(*wxWHITE);  // no grey strip around the list
+#endif
     configSizer->Add(cPanel, 1, wxALL | wxEXPAND, border_size);
 
     wxBoxSizer* boxSizercPanel = new wxBoxSizer(wxVERTICAL);
     cPanel->SetSizer(boxSizercPanel);
 
+#ifdef __OCPN__IOS__
+    // iOS: list as a card, no border.
+    m_scrollWinConfigList =
+        new wxScrolledWindow(cPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize,
+                             wxBORDER_NONE | wxVSCROLL);
+#else
     m_scrollWinConfigList =
         new wxScrolledWindow(cPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize,
                              wxBORDER_RAISED | wxVSCROLL);
+#endif
     m_scrollWinConfigList->SetScrollRate(1, 1);
     boxSizercPanel->Add(m_scrollWinConfigList, 0, wxALL | wxEXPAND,
                         border_size);
@@ -2891,8 +3043,14 @@ void options::OnConfigMouseSelected(wxMouseEvent& event) {
         auto panel = dynamic_cast<wxPanel*>(win);
         if (panel) {
           if (panel == selectedPanel) {
+#ifdef __OCPN__IOS__
+            // iOS: under wxQt the system colour came out almost black, making
+            // the text unreadable (Templates). Light blue like iOS lists.
+            panel->SetBackgroundColour(wxColour(0xd6, 0xe6, 0xfb));
+#else
             panel->SetBackgroundColour(wxSystemSettings::GetColour(
                 wxSystemColour::wxSYS_COLOUR_HIGHLIGHT));
+#endif
             auto cPanel = dynamic_cast<ConfigPanel*>(panel);
             if (cPanel) m_selectedConfigPanelGUID = cPanel->GetConfigGUID();
           } else
@@ -3800,6 +3958,9 @@ void options::CreatePanel_TidesCurrents(size_t parent, int border_size,
     tcDataSelected->InsertItem(li);
 
     wxString setName = ds;
+#ifdef __OCPN__IOS__
+    setName = ocpnios_TcShow(setName);
+#endif
     tcDataSelected->SetItem(id, 0, setName);
     GetTextExtent(setName, &w1, &h);
     w = w1 > w ? w1 : w;
@@ -3876,6 +4037,11 @@ void ChartGroupsUI::CompletePanel() {
                            wxDefaultSize, wxVSCROLL);
 #endif
   activeListSizer->Add(allAvailableCtl, 1, wxEXPAND);
+#ifdef __OCPN__IOS__
+  allAvailableCtl->SetMinSize(wxSize(-1, 12 * m_panel->GetCharHeight()));
+  m_topSizer->GetItem(sizerCharts)
+      ->SetProportion(0);  // do not fill the whole page
+#endif
 
   m_pAddButton = new wxButton(m_panel, ID_GROUPINSERTDIR, _("Add"));
   m_pAddButton->Disable();
@@ -3908,6 +4074,10 @@ void ChartGroupsUI::CompletePanel() {
   m_GroupNB = new wxNotebook(m_panel, ID_GROUPNOTEBOOK, wxDefaultPosition,
                              wxDefaultSize, wxNB_TOP);
   nbSizer->Add(m_GroupNB, 1, wxEXPAND);
+#ifdef __OCPN__IOS__
+  // iOS: the group (directory tree) shrank to a white strip.
+  m_GroupNB->SetMinSize(wxSize(-1, 15 * m_panel->GetCharHeight()));
+#endif
 
   m_GroupNB->Connect(wxEVT_COMMAND_NOTEBOOK_PAGE_CHANGED,
                      wxNotebookEventHandler(ChartGroupsUI::OnGroupPageChange),
@@ -3985,7 +4155,13 @@ void options::CreatePanel_Display(size_t parent, int border_size,
     // another sizer instead of letting it grow.
     wxBoxSizer* wrapperSizer = new wxBoxSizer(wxVERTICAL);
     pDisplayPanel->SetSizer(wrapperSizer);
+#ifdef __OCPN__IOS__
+    // iOS: top left, as tall as its content (centred, it left ~370 pt empty on
+    // the left on iPad and a large empty band below).
+    wrapperSizer->Add(generalSizer, 0, wxALL | wxALIGN_LEFT, border_size);
+#else
     wrapperSizer->Add(generalSizer, 1, wxALL | wxALIGN_CENTER, border_size);
+#endif
 
     // spacer
     generalSizer->Add(0, border_size * 4);
@@ -4136,7 +4312,12 @@ void options::CreatePanel_Display(size_t parent, int border_size,
           new wxStaticBox(pDisplayPanel, wxID_ANY, _("Canvas Layout"));
       wxStaticBoxSizer* itemStaticBoxSizerScreenConfig =
           new wxStaticBoxSizer(itemStaticBoxScreenConfig, wxHORIZONTAL);
+#ifdef __OCPN__IOS__
+      // iOS: as tall as the icons (otherwise it filled the rest of the page).
+      wrapperSizer->Add(itemStaticBoxSizerScreenConfig, 0, wxALL | wxEXPAND, 5);
+#else
       wrapperSizer->Add(itemStaticBoxSizerScreenConfig, 1, wxALL | wxEXPAND, 5);
+#endif
 
       //  The standard screen configs...
       wxString iconDir = g_Platform->GetSharedDataDir();
@@ -4176,7 +4357,13 @@ void options::CreatePanel_Display(size_t parent, int border_size,
     // another sizer instead of letting it grow.
     wxBoxSizer* wrapperSizer = new wxBoxSizer(wxVERTICAL);
     pDisplayPanel->SetSizer(wrapperSizer);
+#ifdef __OCPN__IOS__
+    // iOS: top left, as tall as its content (centred, it left ~370 pt empty on
+    // the left on iPad and a large empty band below).
+    wrapperSizer->Add(generalSizer, 0, wxALL | wxALIGN_LEFT, border_size);
+#else
     wrapperSizer->Add(generalSizer, 1, wxALL | wxALIGN_CENTER, border_size);
+#endif
 
     // spacer
     generalSizer->Add(0, border_size * 4);
@@ -4321,7 +4508,12 @@ void options::CreatePanel_Display(size_t parent, int border_size,
           new wxStaticBox(pDisplayPanel, wxID_ANY, _("Canvas Layout"));
       wxStaticBoxSizer* itemStaticBoxSizerScreenConfig =
           new wxStaticBoxSizer(itemStaticBoxScreenConfig, wxHORIZONTAL);
+#ifdef __OCPN__IOS__
+      // iOS: as tall as the icons (otherwise it filled the rest of the page).
+      wrapperSizer->Add(itemStaticBoxSizerScreenConfig, 0, wxALL | wxEXPAND, 5);
+#else
       wrapperSizer->Add(itemStaticBoxSizerScreenConfig, 1, wxALL | wxEXPAND, 5);
+#endif
 
       //  The standard screen configs...
       wxString iconDir = g_Platform->GetSharedDataDir();
@@ -4366,7 +4558,13 @@ void options::CreatePanel_Units(size_t parent, int border_size,
     panelUnits->SetSizer(wrapperSizer);
 
     wrapperSizer->Add(1, border_size * 24);
+#ifdef __OCPN__IOS__
+    // iOS: top left, as tall as its content (centred, it left ~370 pt empty on
+    // the left on iPad and a large empty band below).
+    wrapperSizer->Add(unitsSizer, 0, wxALL | wxALIGN_LEFT, border_size);
+#else
     wrapperSizer->Add(unitsSizer, 1, wxALL | wxALIGN_CENTER, border_size);
+#endif
 
     // spacer
     unitsSizer->Add(0, border_size * 4);
@@ -4538,6 +4736,10 @@ void options::CreatePanel_Units(size_t parent, int border_size,
     unitsSizer->Add(new wxStaticText(panelUnits, wxID_ANY, ""));
 
     //  Mag Heading user variation
+#ifdef __OCPN__IOS__
+    // iOS: as a row in the same form (app/ios/options_ios.cpp).
+    IosAddMagVarRow(panelUnits, unitsSizer, group_item_spacing);
+#else
 
     wxStaticBox* itemStaticBoxVar = new wxStaticBox(panelUnits, wxID_ANY, "");
 
@@ -4569,6 +4771,7 @@ void options::CreatePanel_Units(size_t parent, int border_size,
                      group_item_spacing);
 
     itemStaticBoxSizerVar->Add(0, border_size * 40);
+#endif
 
   } else {
     wxFlexGridSizer* unitsSizer = new wxFlexGridSizer(2);
@@ -4583,7 +4786,13 @@ void options::CreatePanel_Units(size_t parent, int border_size,
     // another sizer instead of letting it grow.
     wxBoxSizer* wrapperSizer = new wxBoxSizer(wxVERTICAL);
     panelUnits->SetSizer(wrapperSizer);
+#ifdef __OCPN__IOS__
+    // iOS: top left, as tall as its content (centred, it left ~370 pt empty on
+    // the left on iPad and a large empty band below).
+    wrapperSizer->Add(unitsSizer, 0, wxALL | wxALIGN_LEFT, border_size);
+#else
     wrapperSizer->Add(unitsSizer, 1, wxALL | wxALIGN_CENTER, border_size);
+#endif
 
     // spacer
     unitsSizer->Add(0, border_size * 4);
@@ -4885,6 +5094,16 @@ OCPNSoundPanel::OCPNSoundPanel(wxWindow* parent, wxWindowID id,
   SetSoundFileLabel(m_sound_file);
 
   //  Select/Test sound
+#ifdef __OCPN__IOS__
+  // iOS: buttons stacked at full width (side by side they overlapped on
+  // iPhone).
+  wxBoxSizer* soundSizer1 = new wxBoxSizer(wxVERTICAL);
+  StaticBoxSizer1->Add(soundSizer1, 0, wxALL | wxEXPAND, border_size);
+  SelSound = new wxButton(this, ID_SELECTSOUND, selectLegend);
+  soundSizer1->Add(SelSound, 0, wxBOTTOM | wxEXPAND, group_item_spacing * 2);
+  TestSound = new wxButton(this, ID_TESTSOUND, _("Test"));
+  soundSizer1->Add(TestSound, 0, wxEXPAND);
+#else
   wxFlexGridSizer* soundSizer1 = new wxFlexGridSizer(3);
   soundSizer1->SetHGap(border_size * 2);
   StaticBoxSizer1->Add(soundSizer1, 1, wxALL | wxLEFT, border_size);
@@ -4896,11 +5115,17 @@ OCPNSoundPanel::OCPNSoundPanel(wxWindow* parent, wxWindowID id,
   TestSound = new wxButton(this, ID_TESTSOUND, _("Test"), wxDefaultPosition,
                            m_small_button_size, 0);
   soundSizer1->Add(TestSound, 0, wxALL | wxALIGN_RIGHT, group_item_spacing);
+#endif
   auto sound_action = [this](ObservedEvt ev) { m_soundPlaying = false; };
   m_sound_sp_done_listener.Init(m_on_sp_sound_done, sound_action);
 }
 
 void OCPNSoundPanel::SetSoundFileLabel(wxString file) {
+#ifdef __OCPN__IOS__
+  // iOS: file name only; the full app container path is long and meaningless to
+  // the user.
+  file = wxFileName(file).GetFullName();
+#endif
   wxString soundLabel = wxString(" " + _("Audio file name:") + "\n " + file);
 
   ChartDirPanelHardBreakWrapper wrapper(this, soundLabel,
@@ -5122,6 +5347,12 @@ void options::CreatePanel_Sounds(size_t parent, int border_size,
 #endif
 
   if (!deviceCount) StatBoxSoundConfig->Hide();
+#ifdef __OCPN__IOS__
+  // iOS: the system routes audio itself (speaker, headphones, Bluetooth); the
+  // app has a single device and the choice did nothing.
+  StatBoxSoundConfigSizer->ShowItems(false);
+  wrapperSizer->Hide(StatBoxSoundConfigSizer);
+#endif
 
 #ifdef __ANDROID__
   stSoundDeviceIndex->Hide();
@@ -5545,6 +5776,11 @@ void options::CreatePanel_UI(size_t parent, int border_size,
   // Need to set wxChoice vertical size explicitely in Android
   fontChoiceSize = wxSize(-1, m_fontHeight * 3 / 4);
 #endif
+#ifdef __OCPN__IOS__
+  // iOS: a choice and three buttons do not fit side by side on a phone
+  // ("Restore defau..."); stacked as on Android.
+  if (wxGetDisplaySize().x < 700) fLayout = wxVERTICAL;
+#endif
 
   wxStaticBoxSizer* itemFontStaticBoxSizer =
       new wxStaticBoxSizer(itemFontStaticBox, fLayout);
@@ -5621,8 +5857,8 @@ void options::CreatePanel_UI(size_t parent, int border_size,
   miscOptions->Add(pShowMenuBar, 0, wxALL, border_size);
 #endif
 
-#ifdef __ANDROID__
-  pShowMenuBar->Hide();
+#if defined(__ANDROID__) || defined(__OCPN__IOS__)
+  pShowMenuBar->Hide();  // iOS: no menu bar on iOS
 #endif
 
   pShowChartBar = new wxCheckBox(itemPanelFont, wxID_ANY, _("Show Chart Bar"));
@@ -5634,6 +5870,23 @@ void options::CreatePanel_UI(size_t parent, int border_size,
   pShowCompassWin->SetValue(FALSE);
   miscOptions->Add(pShowCompassWin, 0, wxALL, border_size);
 
+#ifdef __OCPN__IOS__
+  // iOS: two rows as in the Settings app: a switch (text left, switch right,
+  // app/ios/fit_width.cpp) and below it "seconds" with the field on the right.
+  // As a single sentence the switch sat on the left and the sentence wrapped.
+  pToolbarAutoHideCB =
+      new wxCheckBox(itemPanelFont, wxID_ANY, _("Enable Toolbar auto-hide"));
+  miscOptions->Add(pToolbarAutoHideCB, 0, wxALL | wxEXPAND, border_size);
+  wxBoxSizer* pToolbarAutoHide = new wxBoxSizer(wxHORIZONTAL);
+  miscOptions->Add(pToolbarAutoHide, 0, wxALL | wxEXPAND, border_size);
+  pToolbarAutoHide->Add(new wxStaticText(itemPanelFont, wxID_ANY, _("seconds")),
+                        0, wxALIGN_CENTER_VERTICAL);
+  pToolbarAutoHide->AddStretchSpacer(1);
+  pToolbarHideSecs =
+      new wxTextCtrl(itemPanelFont, ID_OPTEXTCTRL, "", wxDefaultPosition,
+                     wxSize(60, -1), wxTE_RIGHT);
+  pToolbarAutoHide->Add(pToolbarHideSecs, 0, wxALIGN_CENTER_VERTICAL);
+#else
   wxBoxSizer* pToolbarAutoHide = new wxBoxSizer(wxHORIZONTAL);
   miscOptions->Add(pToolbarAutoHide, 0, wxALL | wxEXPAND, group_item_spacing);
 
@@ -5647,6 +5900,7 @@ void options::CreatePanel_UI(size_t parent, int border_size,
 
   pToolbarAutoHide->Add(new wxStaticText(itemPanelFont, wxID_ANY, _("seconds")),
                         group_item_spacing);
+#endif
 
   auto enable_debug_cb = new wxCheckBox(itemPanelFont, wxID_ANY,
                                         _("Enable Debug in root context menu"));
@@ -5958,6 +6212,11 @@ void options::CreateControls() {
 
   m_small_button_size =
       wxSize(-1, (int)(1.2 * (font_size_y + font_descent /*+ font_lead*/)));
+#ifdef __OCPN__IOS__
+  // iOS: default height; 1.2 x font height is too low for an iOS button
+  // ("Test AIS Alert Sound" was half visible).
+  m_small_button_size = wxDefaultSize;
+#endif
 
   m_nCharWidthMax = GetSize().x / GetCharWidth();
 
@@ -6045,7 +6304,14 @@ void options::CreateControls() {
   CreateListbookIcons();
 
   m_pListbook->SetImageList(m_topImgList);
+#if defined(__OCPN__IOS__) && defined(OCPN_OPTIONS_USE_LISTBOOK)
+  IosCreateHeader(itemDialog1, itemBoxSizer2,
+                  border_size);  // app/ios/options_ios.cpp
+#endif
   itemBoxSizer2->Add(m_pListbook, 1, wxALL | wxEXPAND, border_size);
+#if defined(__OCPN__IOS__) && defined(OCPN_OPTIONS_USE_LISTBOOK)
+  IosSetupNavLists();  // app/ios/options_ios.cpp
+#endif
 
   m_OK_Cancel_Apply_buttons = new wxBoxSizer(wxHORIZONTAL);
   itemBoxSizer2->Add(m_OK_Cancel_Apply_buttons, 0, wxALIGN_RIGHT | wxALL,
@@ -6063,6 +6329,9 @@ void options::CreateControls() {
   m_ApplyButton = new wxButton(itemDialog1, ID_APPLY, _("Apply"));
   m_OK_Cancel_Apply_buttons->Add(m_ApplyButton, 0,
                                  wxALIGN_CENTER_VERTICAL | wxALL, border_size);
+#if defined(__OCPN__IOS__) && defined(OCPN_OPTIONS_USE_LISTBOOK)
+  IosMoveButtonsToHeader(border_size);  // app/ios/options_ios.cpp
+#endif
 
   m_pageDisplay = CreatePanel(_("Display"));
   CreatePanel_Display(m_pageDisplay, border_size, group_item_spacing);
@@ -6126,6 +6395,10 @@ void options::CreateControls() {
   //      PlugIns can add panels, too
   if (g_pi_manager) g_pi_manager->NotifySetupOptions();
 
+#if defined(__OCPN__IOS__) && defined(OCPN_OPTIONS_USE_LISTBOOK)
+  IosApplyLook();
+#endif
+
   SetColorScheme(static_cast<ColorScheme>(0));
 
   // Set the maximum size of the entire settings dialog
@@ -6147,6 +6420,18 @@ void options::CreateControls() {
 }
 
 void options::SetInitialPage(int page_sel, int sub_page) {
+#if defined(__OCPN__IOS__) && defined(OCPN_OPTIONS_USE_LISTBOOK)
+  // iOS: wxQt shows the page list as a QTreeView with a narrow column,
+  // truncating the names ("Dis...", "Co..."). Make the column full width and do
+  // not elide.
+  if (auto* lv = m_pListbook->GetListView()) {
+    if (auto* tv = dynamic_cast<QTreeView*>(lv->GetHandle())) {
+      tv->header()->setStretchLastSection(true);
+      tv->setTextElideMode(Qt::ElideNone);
+      tv->resizeColumnToContents(0);
+    }
+  }
+#endif
   if (page_sel < (int)m_pListbook->GetPageCount())
     m_pListbook->SetSelection(page_sel);
   else
@@ -6167,10 +6452,21 @@ void options::SetInitialPage(int page_sel, int sub_page) {
       }
     }
   }
+#if defined(__OCPN__IOS__) && defined(OCPN_OPTIONS_USE_LISTBOOK)
+  // iOS: always start with the category list, after the current event
+  // loop pass, once the dialog has its size.
+  m_iosListMode = true;
+  CallAfter(&options::IosGoLevel, 0);
+#endif
 }
 
 void options::SetColorScheme(ColorScheme cs) {
   DimeControl(this);
+#if defined(__OCPN__IOS__) && defined(OCPN_OPTIONS_USE_LISTBOOK)
+  // iOS: reapply the iOS style after a colour scheme change (night: dark
+  // cards).
+  if (m_pListbook) CallAfter(&options::IosApplyLook);
+#endif
 
 #ifdef OCPN_OPTIONS_USE_LISTBOOK
   wxListView* lv = m_pListbook->GetListView();
@@ -7706,7 +8002,14 @@ void options::ApplyChanges(wxCommandEvent& event) {
 
 // User Interface Panel
 #if wxUSE_XLOCALE || !wxCHECK_VERSION(3, 0, 0)
+#ifdef __OCPN__IOS__
+  // iOS: no selection in the list (language not available) = keep the language.
+  // Previously en_US was saved then, switching the app to English regardless of
+  // the device language.
+  if (m_bVisitLang && m_itemLangListBox->GetSelection() != wxNOT_FOUND) {
+#else
   if (m_bVisitLang) {
+#endif
     wxString new_canon = "en_US";
     wxString lang_sel = m_itemLangListBox->GetStringSelection();
 
@@ -7769,6 +8072,9 @@ void options::ApplyChanges(wxCommandEvent& event) {
   wxString string_acc_control;
   for (int i = 0; i < tcDataSelected->GetItemCount(); i++) {
     wxString setName = tcDataSelected->GetItemText(i);
+#ifdef __OCPN__IOS__
+    setName = ocpnios_TcFull(setName);
+#endif
     string_acc_control += setName;
   }
   // Any change?
@@ -7777,6 +8083,9 @@ void options::ApplyChanges(wxCommandEvent& event) {
     int nEntry = tcDataSelected->GetItemCount();
     for (int i = 0; i < nEntry; i++) {
       wxString setName = tcDataSelected->GetItemText(i);
+#ifdef __OCPN__IOS__
+      setName = ocpnios_TcFull(setName);
+#endif
       TideCurrentDataSet.push_back(setName.ToStdString());
     }
     m_returnChanges |= TIDES_CHANGED;
@@ -8666,6 +8975,23 @@ void options::DoOnPageChange(size_t page) {
           m_itemLangListBox->Append(loc_lang_name);
         }
       }
+#elif defined(__OCPN__IOS__)
+      // iOS: list the languages that have a .mo file in the bundle; creating a
+      // wxLocale per language takes seconds.
+      const wxString locDir = g_Platform->GetSharedDataDir() + "locale/";
+      wxArrayString lang_array;
+      lang_array.Add("en_US");
+      for (int it = 0; it < nLang; it++) {
+        const wxLanguageInfo* x = wxLocale::GetLanguageInfo(lang_list[it]);
+        if (!x) continue;
+        const wxString canon = x->CanonicalName;
+        const wxString shortName = canon.BeforeFirst('_');
+        if (wxFileExists(locDir + canon + "/LC_MESSAGES/opencpn.mo") ||
+            wxFileExists(locDir + shortName + "/LC_MESSAGES/opencpn.mo"))
+          if (wxNOT_FOUND == lang_array.Index(canon)) lang_array.Add(canon);
+      }
+      for (unsigned int k = 0; k < lang_array.GetCount(); k++)
+        m_itemLangListBox->Append(GetOCPNKnownLanguage(lang_array[k]));
 #else
       wxArrayString lang_array;
 
@@ -8707,6 +9033,7 @@ void options::DoOnPageChange(size_t page) {
         m_itemLangListBox->Append(loc_lang_name);
       }
 #endif
+#ifndef __OCPN__IOS__  // iOS: keep the locale with the plugin catalogs.
       // BUGBUG
       //  Remember that wxLocale ctor has the effect of changing the system
       //  locale, including the "C" libraries.
@@ -8725,6 +9052,7 @@ void options::DoOnPageChange(size_t page) {
 
       setlocale(LC_NUMERIC, "C");
       plocale_def_lang->AddCatalog("opencpn");
+#endif
 
       m_itemLangListBox->SetStringSelection(current_sel);
 
@@ -8766,11 +9094,16 @@ void options::DoOnPageChange(size_t page) {
                                     wxEXPAND | wxGROW | wxALL, 4);
       if (g_pi_manager) g_pi_manager->SetListPanelPtr(m_pPlugInCtrl);
 
+#ifndef __OCPN__IOS__
+      // iOS: no plugin catalog. Plugins are built into the app; downloading and
+      // installing is not possible on iOS (the catalog update and settings
+      // buttons did nothing useful).
       m_PluginCatalogMgrPanel = new CatalogMgrPanel(itemPanelPlugins);
       m_PluginCatalogMgrPanel->SetListPanelPtr(m_pPlugInCtrl);
 
       itemBoxSizerPanelPlugins->Add(m_PluginCatalogMgrPanel, 0,
                                     wxEXPAND | wxALL, 4);
+#endif
       itemBoxSizerPanelPlugins->Layout();
 
       //  Update the PlugIn page to reflect the state of individual selections
@@ -9443,7 +9776,12 @@ void options::OnInsertTideDataLocation(wxCommandEvent& event) {
     int id = tcDataSelected->GetItemCount();  // next index
     li.SetId(id);
     long idx = tcDataSelected->InsertItem(li);
+#ifdef __OCPN__IOS__
+    tcDataSelected->SetItem(
+        id, 0, ocpnios_TcShow(g_Platform->NormalizePath(sel_file)));
+#else
     tcDataSelected->SetItem(id, 0, g_Platform->NormalizePath(sel_file));
+#endif
 
     //    Record the currently selected directory for later use
     wxFileName fn(sel_file);
@@ -9539,6 +9877,15 @@ OpenGLOptionsDlg::OpenGLOptionsDlg(wxWindow* parent)
   flexSizer->AddSpacer(0);
   flexSizer->Add(m_cbUseAcceleratedPanning, 0, wxALL | wxEXPAND, 5);
   flexSizer->AddGrowableCol(1);
+#ifdef __OCPN__IOS__
+  // iOS: one column, heading above the setting; two columns were wider than an
+  // iPhone.
+  flexSizer->RemoveGrowableCol(1);
+  flexSizer->SetCols(1);
+  flexSizer->AddGrowableCol(0);
+  for (wxSizerItem* item : flexSizer->GetChildren())
+    item->SetFlag(item->GetFlag() & ~wxALIGN_RIGHT);
+#endif
   mainSizer->Add(flexSizer, 0, wxALL | wxEXPAND, 5);
 
   wxStdDialogButtonSizer* btnSizer = new wxStdDialogButtonSizer();
@@ -9606,7 +9953,10 @@ void OpenGLOptionsDlg::Populate() {
   m_cbPolygonSmoothing->SetValue(g_GLOptions.m_GLPolygonSmoothing);
   m_cbLineSmoothing->SetValue(g_GLOptions.m_GLLineSmoothing);
 
-#if defined(__UNIX__) && !defined(__ANDROID__) && !defined(__WXOSX__)
+// iOS: Software OpenGL (LIBGL_ALWAYS_SOFTWARE) only works on Linux/Mesa; on iOS
+// the switch did nothing. Hide it.
+#if defined(__UNIX__) && !defined(__ANDROID__) && !defined(__WXOSX__) && \
+    !defined(__OCPN__IOS__)
   if (top_frame::Get()->GetWxGlCanvas()) {
     if (top_frame::Get()->GetGlVersionString().Upper().Find("MESA") !=
         wxNOT_FOUND)
