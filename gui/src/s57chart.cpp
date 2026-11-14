@@ -62,6 +62,8 @@
 #include "model/plugin_comm.h"
 
 #include "gdal/cpl_csv.h"
+#include "gdal/cpl_error.h"
+#include "model/notification_manager.h"
 #include "ssl/sha1.h"
 
 #include "chart_ctx_factory.h"
@@ -6121,7 +6123,34 @@ bool s57chart::InitENCMinimal(const wxString &FullPath) {
   S57Reader *pENCReader = m_pENCDS->GetModule(0);
   pENCReader->SetClassBased(g_poRegistrar);
 
+  CPLErrorReset();
   int rc = pENCReader->Ingest();
+  if (rc != 0) {
+    // Without this line the log only says "Cannot initialize ENC file",
+    // even when the cell was withdrawn by an update.
+    wxString why(CPLGetLastErrorMsg(), wxConvUTF8);
+    wxLogMessage("   S57 updates for %s failed (code %d): %s", FullPath, rc,
+                 why.IsEmpty() ? wxString("no reason given") : why);
+    // Also notify the user of a withdrawn cell. The text comes from
+    // S57Reader::ApplyUpdates. This code
+    // may run in a chart database worker thread, so the notification goes
+    // to the main thread via CallAfter.
+    int cancel_update = 0;
+    if (wxTheApp && sscanf(why.mb_str(), "Update %d cancels this cell",
+                           &cancel_update) == 1) {
+      wxString cell = wxFileName(FullPath).GetName();
+      wxTheApp->CallAfter([cell, cancel_update]() {
+        wxString msg = wxString::Format(
+            wxGetTranslation("ENC cell %s has been cancelled by its producer "
+                             "(update %d) and is not shown. Install a current "
+                             "chart for this area.",
+                             "opencpn"),
+            cell, cancel_update);
+        NotificationManager::GetInstance().AddNotification(
+            NotificationSeverity::kWarning, msg.ToStdString());
+      });
+    }
+  }
   return (rc == 0);  // true;
 }
 

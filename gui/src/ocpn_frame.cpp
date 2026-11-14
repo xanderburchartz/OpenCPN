@@ -545,7 +545,11 @@ MyFrame::MyFrame(const wxString &title, const wxPoint &pos, const wxSize &size,
       m_pauidockart(pauidockart),
       m_rest_server(rest_server),
       m_open_gpx_file(open_gpx_file) {
-  g_current_monitor = wxDisplay::GetFromWindow(this);
+  // GetFromWindow returns wxNOT_FOUND (-1) when the window is on no display
+  // (e.g. not shown yet under wxQt); in a size_t that is an invalid monitor
+  // index. Use monitor 0 then, as OnMove does.
+  int monitor_idx = wxDisplay::GetFromWindow(this);
+  g_current_monitor = monitor_idx == wxNOT_FOUND ? 0 : monitor_idx;
 #ifdef __WXOSX__
   // On retina displays there is a difference between the physical size of the
   // OpenGL canvas and the DIP This is not observed anywhere else so far, so
