@@ -47,6 +47,9 @@
 #include "email.h"
 #include "folder.xpm"
 #include "grib_ui_dlg.h"
+#ifdef __OCPN__IOS__
+#include <QWidget>
+#endif
 #include <wx/arrimpl.cpp>
 
 #ifdef __ANDROID__
@@ -250,6 +253,42 @@ GRIBUICtrlBar::GRIBUICtrlBar(wxWindow *parent, wxWindowID id,
 
     pConf->SetPath("/Directories");
     pConf->Read("GRIBDirectory", &m_grib_dir);
+#ifdef __OCPN__IOS__
+    // iOS: every install gives the app a new container directory, so saved
+    // absolute paths point to a directory that no longer exists and the last
+    // GRIB file was not loaded. Use the same file name under Documents. GRIB
+    // files get their own Documents/GRIB folder ("OpenCPN > GRIB" in the Files
+    // app) instead of lying loose next to Charts and log; loose ones are moved
+    // there.
+    {
+      wxString docs = wxStandardPaths::Get().GetDocumentsDir();
+      wxString gribs = docs + wxFileName::GetPathSeparator() + "GRIB";
+      if (!wxDir::Exists(gribs))
+        wxFileName::Mkdir(gribs, 0755, wxPATH_MKDIR_FULL);
+      {
+        wxArrayString loose;
+        wxDir::GetAllFiles(docs, &loose, wxEmptyString, wxDIR_FILES);
+        for (const wxString &f : loose) {
+          wxString ext = wxFileName(f).GetExt().Lower();
+          if (ext == "grb" || ext == "grb2" || ext == "grib" || ext == "grib2")
+            wxRenameFile(f,
+                         gribs + wxFileName::GetPathSeparator() +
+                             wxFileName(f).GetFullName(),
+                         false);
+        }
+      }
+      wxString d = m_grib_dir;
+      while (d.EndsWith("/")) d.RemoveLast();
+      if (!wxDir::Exists(m_grib_dir) || d == docs) m_grib_dir = gribs;
+      for (size_t i = 0; i < m_file_names.GetCount(); i++) {
+        if (wxFileName::FileExists(m_file_names[i])) continue;
+        const wxString name = wxFileName(m_file_names[i]).GetFullName();
+        wxFileName moved(gribs, name);
+        if (!moved.FileExists()) moved = wxFileName(docs, name);
+        if (moved.FileExists()) m_file_names[i] = moved.GetFullPath();
+      }
+    }
+#endif
 
     pConf->SetPath("/PlugIns/GRIB");
     pConf->Read("ManualRequestZoneSizing", &m_SavedZoneSelMode, 0);
@@ -405,7 +444,7 @@ void GRIBUICtrlBar::SetScaledBitmap(double factor) {
 
   // Careful here, this MinSize() sets the final width of the control bar,
   // overriding the width of the wxChoice above it.
-#ifdef __ANDROID__
+#if defined(__ANDROID__) || defined(__OCPN__IOS__)
   m_sTimeline->SetSize(wxSize(20 * m_ScaledFactor, -1));
   m_sTimeline->SetMinSize(wxSize(20 * m_ScaledFactor, -1));
 #else
@@ -456,6 +495,20 @@ void GRIBUICtrlBar::OpenFile(bool newestFile) {
   ArrayOfGribRecordSets *rsa = m_bGRIBActiveFile->GetRecordSetArrayPtr();
   wxString title;
   if (m_bGRIBActiveFile->IsOK()) {
+#ifdef __OCPN__IOS__
+    // iOS: upstream saves the directory and file names only in ~GRIBUICtrlBar.
+    // iOS terminates the app without running it, so the last file was lost
+    // after a restart. Write it immediately.
+    if (wxFileConfig *cfg = GetOCPNConfigObject()) {
+      cfg->DeleteGroup("/Settings/GRIB/FileNames");
+      cfg->SetPath("/Settings/GRIB/FileNames");
+      for (unsigned int i = 0; i < m_file_names.GetCount(); i++)
+        cfg->Write(wxString::Format("Filename%u", i), m_file_names[i]);
+      cfg->SetPath("/Directories");
+      cfg->Write("GRIBDirectory", m_grib_dir);
+      cfg->Flush();
+    }
+#endif
     wxFileName fn(m_bGRIBActiveFile->GetFileNames()[0]);
     title = (_("File: "));
     title.Append(fn.GetFullName());
@@ -1749,6 +1802,27 @@ void GRIBUICtrlBar::PopulateComboDataList() {
     m_cRecordForecast->Append(toUsrDateTimeFormat_Plugin(t));
   }
   m_cRecordForecast->SetSelection(index);
+#ifdef __OCPN__IOS__
+  // iOS: the choice got its width when the bar opened, while it only held
+  // "Item0", and then showed just the first letter of the date. Size it to the
+  // longest time plus room for the arrow.
+  {
+    int w = 0;
+    for (unsigned int i = 0; i < m_cRecordForecast->GetCount(); i++)
+      w = wxMax(
+          w,
+          m_cRecordForecast->GetTextExtent(m_cRecordForecast->GetString(i)).x);
+    const int need = w + 60;
+    m_cRecordForecast->SetMinSize(wxSize(need, -1));
+    m_cRecordForecast->SetMaxSize(wxSize(-1, -1));
+    if (QWidget *q = m_cRecordForecast->GetHandle()) {
+      q->setMaximumWidth(QWIDGETSIZE_MAX);
+      q->setMinimumWidth(need);
+    }
+    Layout();
+    Fit();
+  }
+#endif
 }
 
 void GRIBUICtrlBar::OnZoomToCenterClick(wxCommandEvent &event) {

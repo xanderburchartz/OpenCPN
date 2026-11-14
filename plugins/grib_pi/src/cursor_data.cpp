@@ -94,6 +94,37 @@ void CursorData::AddTrackingControl(wxControl *ctrl1, wxControl *ctrl2,
                                     bool show, bool vertical, int wctrl2,
                                     int wctrl3_4) {
   if (show) {
+#ifdef __OCPN__IOS__
+    // iOS: align switch and values on one line; the values sat at the top of
+    // the row and the 31 pt switch lower. Same layout, vertically centered,
+    // switch on the sheet margin.
+    m_fgTrackingControls->Add(
+        ctrl1, 0, wxALIGN_CENTER_VERTICAL | wxLEFT | wxTOP | wxBOTTOM, 16);
+    ctrl1->Show();
+    for (wxControl *c : {ctrl2, ctrl3, ctrl4}) {
+      if (!c) continue;
+      if (c == ctrl2)
+        c->SetMinSize(wxSize(wctrl2, -1));
+      else if (c == ctrl3)
+        c->SetMinSize(wxSize(wctrl3_4, -1));
+      else
+        c->SetMinSize(wxSize(vertical ? wctrl2 : wctrl3_4, -1));
+      c->Show();
+    }
+    if (ctrl2)
+      m_fgTrackingControls->Add(ctrl2, 0, wxALIGN_CENTER_VERTICAL | wxLEFT, 8);
+    else
+      m_fgTrackingControls->Add(0, 0, 1, wxALL, 1);
+    if (ctrl3)
+      m_fgTrackingControls->Add(ctrl3, 0, wxALIGN_CENTER_VERTICAL, 0);
+    else if (!vertical)
+      m_fgTrackingControls->Add(0, 0, 1, wxALL, 1);
+    if (ctrl4)
+      m_fgTrackingControls->Add(ctrl4, 0, wxALIGN_CENTER_VERTICAL, 0);
+    else if (!vertical)
+      m_fgTrackingControls->Add(0, 0, 1, wxALL, 1);
+    return;
+#endif
     m_fgTrackingControls->Add(ctrl1, 0, wxALL, 1);
     ctrl1->Show();
     if (ctrl2) {
@@ -130,11 +161,19 @@ void CursorData::AddTrackingControl(wxControl *ctrl1, wxControl *ctrl2,
 void CursorData::PopulateTrackingControls(bool vertical) {
   m_fgTrackingControls->Clear();
   if (!vertical) {
+#ifdef __OCPN__IOS__
+    // iOS: the bar is always compact (grib_ui_dlg_base.cpp). window_fit wraps
+    // the dialog sizer in an outer sizer for the header bar, so the C cast
+    // below found no grid and chose 12 columns: the cursor data ended up in one
+    // row wider than an iPhone.
+    m_fgTrackingControls->SetCols(4);
+#else
     auto *ps = (wxFlexGridSizer *)(m_gparent.GetSizer());
     if (ps && (ps->GetCols() == 1))
       m_fgTrackingControls->SetCols(4);  // compact mode
     else
       m_fgTrackingControls->SetCols(12);
+#endif
   } else
     m_fgTrackingControls->SetCols(2);
 

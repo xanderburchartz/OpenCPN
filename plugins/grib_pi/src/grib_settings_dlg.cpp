@@ -27,6 +27,9 @@
 
 #include "grib_pi.h"
 #include "folder.xpm"
+#ifdef __OCPN__IOS__
+#include <QWidget>
+#endif
 
 static const wxString units0_names[] = {_("Knots"), _("m/s"),      _("mph"),
                                         _("km/h"),  _("Beaufort"), ""};
@@ -744,6 +747,58 @@ void GribSettingsDialog::OnPageChange(wxNotebookEvent &event) {
 }
 
 void GribSettingsDialog::SetSettingsDialogSize() {
+#ifdef __OCPN__IOS__
+  // iOS: the dialog becomes a full-screen sheet (app/ios/window_fit.cpp). The
+  // sizing below gave the pages their content width, at most screen - 80 pt:
+  // clipped on the right and scrolling horizontally. Here: scroll vertically
+  // only and let the sheet set the width; app/ios/fit_width.cpp lays out the
+  // rows to the screen width. Height: what remains beside the header bar
+  // (window_fit), tab bar and Apply button; with a 10 pt minimum the pages
+  // disappeared (only the button showed).
+  int availH = 400, availW = -1;
+  if (wxWindow *frame = wxTheApp->GetTopWindow()) {
+    availH = frame->GetClientSize().y - 2 * m_sButton->GetSize().GetY() - 140;
+    availW = frame->GetClientSize().x;
+  }
+  availH = wxMax(200, availH);
+  // Limit the width: the notebook took the width of the widest page (GUI),
+  // after which the Data page ran off the screen.
+  if (availW > 100) m_nSettingsBook->SetMaxSize(wxSize(availW, -1));
+  for (size_t i = 0; i < m_nSettingsBook->GetPageCount(); i++) {
+    auto *sc = dynamic_cast<wxScrolledWindow *>(m_nSettingsBook->GetPage(i));
+    if (!sc) continue;
+    sc->SetScrollRate(0, 5);
+    // wxStaticBoxSizer takes at least the best width of its static box. In wxQt
+    // that is the QGroupBox sizeHint, which follows the box's current width;
+    // after a wider layout it stayed 421 pt and Data ran off the screen after
+    // visiting GUI. The title is short, so a small best width is enough.
+    for (wxWindow *c : sc->GetChildren()) {
+      if (dynamic_cast<wxStaticBox *>(c))
+        c->CacheBestSize(
+            wxSize(c->GetTextExtent(c->GetLabel()).x + 40, c->GetBestSize().y));
+      // Sliders: drop a fixed width from an earlier, wider layout (Transparency
+      // was stuck at 405 pt and the card ran off the screen). They stretch
+      // instead.
+      if (dynamic_cast<wxSlider *>(c)) {
+        c->SetMinSize(wxSize(80, c->GetMinSize().y));
+        c->SetMaxSize(wxSize(-1, -1));
+        if (QWidget *q = c->GetHandle()) {
+          q->setMinimumWidth(0);
+          q->setMaximumWidth(QWIDGETSIZE_MAX);
+        }
+      }
+    }
+    int need = availH;
+    if (wxSizer *sz = sc->GetSizer())
+      need = wxMin(availH, sz->GetMinSize().y + 10);
+    sc->SetMinSize(wxSize(10, need));
+    if (availW > 100) sc->SetMaxSize(wxSize(availW, -1));
+    if (wxSizer *sz = sc->GetSizer()) sz->FitInside(sc);
+  }
+  Layout();
+  Refresh();
+  return;
+#endif
 #ifdef __ANDROID__
   /*Sizing do not work with wxScolledWindow so we need to compute it
   using fixed X/Y margin to try to center nicely the dialog in the screen*/
@@ -1021,6 +1076,15 @@ void GribSettingsDialog::ShowSettings(int params, bool show) {
       // m_sIsoBarSpacing->SetMinSize(wxSize(70, -1));
       break;
     case ISO_LINE_SHORT:
+#ifdef __OCPN__IOS__
+      // iOS: the number next to "Spacing (pixels)" instead of one row lower,
+      // below "Always visible".
+      if (!m_fIsoBarSpacing->IsColGrowable(0))
+        m_fIsoBarSpacing->AddGrowableCol(0);
+      m_fIsoBarSpacing->Add(m_sIsoBarSpacing, 0,
+                            wxALIGN_CENTER_VERTICAL | wxALL, 5);
+      break;
+#endif
       m_fIsoBarVisibility->Add(m_sIsoBarSpacing, 0, 5,
                                wxTOP | wxLEFT | wxEXPAND);
       //  m_sIsoBarSpacing->SetMinSize(wxSize(-1, -1));
