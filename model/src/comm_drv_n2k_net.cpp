@@ -1906,6 +1906,16 @@ bool CommDriverN2KNet::PrepareForTX() {
   if (m_TX_available)
     return true;
   else {
+#ifdef __OCPN__IOS__
+    // iOS: this request goes to all devices on the bus, each answering with
+    // product information. Upstream sent it on every transmit; with a YDNR (no
+    // "YDEN") m_TX_available never becomes true and the bus got flooded. At
+    // most once per minute.
+    static wxLongLong s_last_probe = 0;
+    wxLongLong now = wxGetUTCTimeMillis();
+    if (s_last_probe != 0 && now - s_last_probe < 60000) return false;
+    s_last_probe = now;
+#endif
     // Send a broadcast request for PGN 126996, Product Information
     std::vector<unsigned char> payload;
     payload.push_back(0x14);
