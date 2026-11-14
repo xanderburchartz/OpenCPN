@@ -146,6 +146,23 @@ WX_DECLARE_OBJARRAY(wxBitmap, ArrayOfBitmaps);
  * provide a combobox with custom-drawn items, specifically for selecting
  * waypoint icons.
  */
+#ifdef __OCPN__IOS__
+// iOS: wxOwnerDrawnComboBox (generic combo with its own popup) does not work in
+// wxQt: the popup showed one item ("tempsub") over other fields. Use a plain
+// wxChoice (QComboBox) with the icons as a QIcon per item instead.
+class OCPNIconCombo : public wxChoice {
+public:
+  OCPNIconCombo(wxWindow* parent, wxWindowID id, const wxString& value = _T(""),
+                const wxPoint& pos = wxDefaultPosition,
+                const wxSize& size = wxDefaultSize, int n = 0,
+                const wxString choices[] = NULL, long style = 0,
+                const wxValidator& validator = wxDefaultValidator,
+                const wxString& name = _T("OCPNIconCombo"));
+  int Append(const wxString& item, wxBitmap bmp);
+  void Clear(void);
+  void SetPopupMaxHeight(int) {}
+};
+#else
 class OCPNIconCombo : public wxOwnerDrawnComboBox {
 public:
   OCPNIconCombo(wxWindow* parent, wxWindowID id, const wxString& value = "",
@@ -168,6 +185,7 @@ private:
   int itemHeight;
   ArrayOfBitmaps bmpArray;
 };
+#endif  // __OCPN__IOS__
 
 //    LatLonTextCtrl Specification
 //    We need a derived wxText control for lat/lon input in the MarkProp dialog

@@ -67,7 +67,7 @@
 
 WX_DEFINE_ARRAY_PTR(ChartCanvas *, arrayofCanvasPtr);
 
-#ifdef __ANDROID__
+#if defined(__ANDROID__) || defined(__OCPN__IOS__)  // iOS: 2 fields
 #define STAT_FIELD_TICK -1
 #define STAT_FIELD_SOGCOG 0
 #define STAT_FIELD_CURSOR_LL -1

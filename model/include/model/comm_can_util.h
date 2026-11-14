@@ -45,7 +45,7 @@ struct can_frame {
 };
 #endif
 
-#if defined(__WXMAC__)
+#if defined(__WXMAC__) || defined(__OCPN__IOS__)  // iOS: no SocketCAN
 #define CAN_MAX_DLEN 8
 
 struct can_frame {

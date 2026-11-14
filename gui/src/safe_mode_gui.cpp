@@ -30,6 +30,10 @@
 #include <wx/filename.h>
 #include <wx/sizer.h>
 
+#ifdef __OCPN__IOS__
+#include <QVariant>
+#include <QWidget>
+#endif
 #include "model/cmdline.h"
 #include "model/ocpn_utils.h"
 #include "model/safe_mode.h"
@@ -87,6 +91,11 @@ void check_last_start() {
 
   dlg.AddHtmlContent(html);
 
+#ifdef __OCPN__IOS__
+  // iOS: as an alert with its own buttons ("Safe mode start" / "Normal start"),
+  // not as a sheet: there "Done" chose safe mode, which nobody expects.
+  if (dlg.GetHandle()) dlg.GetHandle()->setProperty("ocpnios_alert", true);
+#endif
   int reply = dlg.ShowModal();
   safe_mode = reply == wxID_OK;
 }

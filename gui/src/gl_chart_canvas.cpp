@@ -105,13 +105,28 @@
 #include "viewport.h"
 
 #ifdef USE_ANDROID_GLES2
+#ifndef __OCPN__IOS__  // iOS: qopengl.h provides the GLES2 headers
 #include <GLES2/gl2.h>
+#endif
 #include "linmath.h"
 #include "shaders.h"
 #endif
 
+#ifdef __OCPN__IOS__
+// iOS: under wxQt wxGLCanvas is a QOpenGLWidget, which renders into its own
+// framebuffer; binding 0 drew nowhere (black chart area). Bind the
+// framebuffer of the current context instead.
+#include <QOpenGLContext>
+static void IosBindScreenFramebuffer(GLenum target) {
+  QOpenGLContext *ctx = QOpenGLContext::currentContext();
+  glBindFramebuffer(target, ctx ? ctx->defaultFramebufferObject() : 0);
+}
+#endif
+
 #ifdef __ANDROID__
 #include "androidUTIL.h"
+#elif defined(__OCPN__IOS__)
+// iOS: no GLX
 #elif defined(__WXQT__) || defined(__WXGTK__)
 #include <GL/glx.h>
 #endif
@@ -131,6 +146,8 @@ int __cdecl printf2(const char *format, ...);
 
 #if defined(__ANDROID__)
 #include "androidUTIL.h"
+#elif defined(__OCPN__IOS__)
+// iOS: no GLEW; GL via qopengl.h
 #elif defined(__WXQT__) || defined(__WXGTK__) || defined(FLATPAK)
 #include <GL/glew.h>
 #endif
@@ -144,10 +161,6 @@ extern "C" void glOrthof(float left, float right, float bottom, float top,
   ;                               \
   glOrthof(a, b, c, d, e, f);
 
-#endif
-
-#ifdef USE_ANDROID_GLES2
-#include <GLES2/gl2.h>
 #endif
 
 #if defined(USE_ANDROID_GLES2) || defined(ocpnUSE_GLSL)
@@ -372,8 +385,9 @@ void glChartCanvas::Init() {
   m_gldc.SetDPIFactor(g_BasePlatform->GetDisplayDIPMult(GetParent()));
 
   m_displayScale = 1.0;
-#if defined(__WXOSX__) || defined(__WXGTK3__)
+#if defined(__WXOSX__) || defined(__WXGTK3__) || defined(__OCPN__IOS__)
   // Support scaled HDPI displays.
+  // iOS: Retina factor here too, the same as ChartCanvas in the GL path.
   m_displayScale = GetContentScaleFactor();
 #endif
   m_pParentCanvas->VPoint.SetPixelScale(m_displayScale);
@@ -449,7 +463,16 @@ void glChartCanvas::Init() {
 
 //  Gesture support for platforms other than Android
 #ifdef HAVE_WX_GESTURE_EVENTS
+#ifdef __OCPN__IOS__
+  // iOS: no wx long-press gesture (see chcanv.cpp). QTapAndHoldGesture passed
+  // on the position of an earlier tap, so the menu missed the route under the
+  // finger
+  // ("Activate" was missing), and it aborted the touch for the iOS touch
+  // filter.
+  if (!EnableTouchEvents(wxTOUCH_ZOOM_GESTURE)) {
+#else
   if (!EnableTouchEvents(wxTOUCH_ZOOM_GESTURE | wxTOUCH_PRESS_GESTURES)) {
+#endif
     wxLogError("Failed to enable touch events");
   }
 
@@ -750,7 +773,11 @@ bool glChartCanvas::buildFBOSize(int fboSize) {
   }
 
   glBindTexture(GL_TEXTURE_2D, 0);
+#ifdef __OCPN__IOS__
+  IosBindScreenFramebuffer(GL_FRAMEBUFFER_EXT);
+#else
   glBindFramebuffer(GL_FRAMEBUFFER_EXT, 0);
+#endif
 
   // Check framebuffer completeness at the end of initialization.
   glBindFramebuffer(GL_FRAMEBUFFER_EXT, m_fb0);
@@ -760,7 +787,11 @@ bool glChartCanvas::buildFBOSize(int fboSize) {
 
   GLenum fb_status = glCheckFramebufferStatus(GL_FRAMEBUFFER_EXT);
 
+#ifdef __OCPN__IOS__
+  IosBindScreenFramebuffer(GL_FRAMEBUFFER_EXT);
+#else
   glBindFramebuffer(GL_FRAMEBUFFER_EXT, 0);
+#endif
 
   if (fb_status != GL_FRAMEBUFFER_COMPLETE_EXT) {
     wxString msg;
@@ -886,7 +917,11 @@ bool glChartCanvas::buildFBOSize(int fboSize) {
   }
 
   glBindTexture(GL_TEXTURE_2D, 0);
+#ifdef __OCPN__IOS__
+  IosBindScreenFramebuffer(GL_FRAMEBUFFER);
+#else
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
+#endif
 
   // Check framebuffer completeness at the end of initialization.
   glBindFramebuffer(GL_FRAMEBUFFER, m_fb0);
@@ -896,7 +931,11 @@ bool glChartCanvas::buildFBOSize(int fboSize) {
 
   GLenum fb_status = glCheckFramebufferStatus(GL_FRAMEBUFFER_EXT);
 
+#ifdef __OCPN__IOS__
+  IosBindScreenFramebuffer(GL_FRAMEBUFFER);
+#else
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
+#endif
 
   if (fb_status != GL_FRAMEBUFFER_COMPLETE) {
     wxString msg;
@@ -1006,7 +1045,7 @@ void glChartCanvas::SetupOpenGL() {
   msg += m_GLSLversion;
   wxLogMessage(msg);
 
-#ifndef __ANDROID__
+#if !defined(__ANDROID__) && !defined(__OCPN__IOS__)  // iOS: no GLEW
 #ifndef __WXOSX__
   GLenum err = glewInit();
 #ifdef GLEW_ERROR_NO_GLX_DISPLAY
@@ -1086,7 +1125,10 @@ void glChartCanvas::SetupOpenGL() {
   wxLogMessage(wxString::Format("OpenGL-> Texture rectangle format: %x",
                                 g_texture_rectangle_format));
 
-#ifdef __ANDROID__
+#if defined(__ANDROID__) || defined(__OCPN__IOS__)
+  // iOS: OpenGL ES 3 on iOS supports NPOT textures but reports none of the
+  // extension names above; without this the format stayed 0 and all overlay
+  // textures (toolbar, text) were garbled.
   g_texture_rectangle_format = GL_TEXTURE_2D;
 #endif
 
@@ -1140,7 +1182,11 @@ void glChartCanvas::SetupOpenGL() {
                            g_texture_rectangle_format, m_cache_tex[0], 0);
 
     GLenum fb_status = glCheckFramebufferStatus(GL_FRAMEBUFFER_EXT);
+#ifdef __OCPN__IOS__
+    IosBindScreenFramebuffer(GL_FRAMEBUFFER_EXT);
+#else
     glBindFramebuffer(GL_FRAMEBUFFER_EXT, 0);
+#endif
 
     if (fb_status != GL_FRAMEBUFFER_COMPLETE_EXT) {
       wxString msg;
@@ -3841,7 +3887,7 @@ void glChartCanvas::Render() {
 
 #endif
 
-#ifdef __WXOSX__
+#if defined(__WXOSX__) || defined(__OCPN__IOS__)
   // Support scaled HDPI displays.
   m_displayScale = GetContentScaleFactor();
 #endif
@@ -4214,7 +4260,11 @@ void glChartCanvas::Render() {
       }  // full page render
 
       // Disable Render to FBO
+#ifdef __OCPN__IOS__
+      IosBindScreenFramebuffer(GL_FRAMEBUFFER);
+#else
       glBindFramebuffer(GL_FRAMEBUFFER, 0);
+#endif
 
 #endif  // gles2 for accpan
 
@@ -4223,7 +4273,8 @@ void glChartCanvas::Render() {
     useFBO = true;
   }
 
-#ifndef __ANDROID__
+#if !defined(__ANDROID__) && \
+    !defined(__OCPN__IOS__)  // iOS: fixed-function GL, not in GLES2
   if (VPoint.tilt) {
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
@@ -4253,7 +4304,11 @@ void glChartCanvas::Render() {
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
     glBlitFramebuffer(0, 0, sx, sy, 0, 0, sx*2, sy*2, GL_COLOR_BUFFER_BIT, GL_LINEAR);
 
+#ifdef __OCPN__IOS__
+    IosBindScreenFramebuffer(GL_FRAMEBUFFER);
+#else
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+#endif
 
 #else
     // Render the cached texture as quad to screen
@@ -5391,6 +5446,15 @@ void glChartCanvas::OnEvtPanGesture(wxPanGestureEvent &event) {
 
 //  Generic wxWidgets gesture event processor
 void glChartCanvas::OnEvtZoomGesture(wxZoomGestureEvent &event) {
+#ifdef __OCPN__IOS__
+  // iOS: pinch zoom goes through ChartCanvas::OnZoom, which really redraws the
+  // chart on every step. The mobile path below (FastZoom/ZoomProject) shows a
+  // stretched cached image with a fill image around it while pinching, which
+  // gave black areas. The events arrive here because the touch lands on the
+  // GL window.
+  if (m_pParentCanvas) m_pParentCanvas->GetEventHandler()->ProcessEvent(event);
+  return;
+#endif
   if (g_true_zoom) {
     float zoom_gain = 1.0;
     float zout_gain = 1.0;
@@ -5972,7 +6036,11 @@ void glChartCanvas::RenderScene(bool bRenderCharts, bool bRenderOverlays) {
   }
 
   // All done, so disable Render to FBO
+#ifdef __OCPN__IOS__
+  IosBindScreenFramebuffer(GL_FRAMEBUFFER);
+#else
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
+#endif
 
 #endif
 }

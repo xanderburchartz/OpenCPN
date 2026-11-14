@@ -135,12 +135,15 @@ void MakeCommDriver(const ConnectionParams* params) {
     }
 #endif
 
-#ifdef __ANDROID__
+#if defined(__ANDROID__) || defined(__OCPN__IOS__)
+    // iOS: same driver; the sensors are provided by app/ios/internal_gps.mm.
     case INTERNAL_GPS: {
       auto driver = std::make_unique<CommDriverN0183AndroidInt>(params, msgbus);
       registry.Activate(std::move(driver));
       break;
     }
+#endif
+#ifdef __ANDROID__
 
     case INTERNAL_BT: {
       auto driver = std::make_unique<CommDriverN0183AndroidBT>(params, msgbus);
