@@ -44,6 +44,13 @@
 
 #ifdef __ANDROID__
 #include "qdebug.h"
+#elif defined(__OCPN__IOS__)  // iOS: qDebug in shaders.h
+// N2kDef.h (libs/N2KParser) defines F(str), which breaks qscopeguard.h from
+// Qt 6.
+#pragma push_macro("F")
+#undef F
+#include "qdebug.h"
+#pragma pop_macro("F")
 #endif
 
 //    Profiling support

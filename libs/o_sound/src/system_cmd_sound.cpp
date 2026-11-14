@@ -55,7 +55,12 @@ static int do_play(const char* cmd, const char* path) {
   snprintf(buff, sizeof(buff), cmd, path);
   wxLogDebug("Sound command: %s", buff);
 
+#ifdef __OCPN__IOS__
+  // iOS: iOS has no system(); playing sound via an external command is impossible.
+  int status = -1;
+#else
   int status = system(buff);
+#endif
   if (status == -1) {
     wxLogWarning("Cannot fork process running %s", buff);
     return -1;

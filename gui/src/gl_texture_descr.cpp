@@ -27,6 +27,9 @@
 
 #if defined(__ANDROID__)
 #include <GLES2/gl2.h>
+#elif defined(__OCPN__IOS__)  // iOS: GL via Qt (OpenGL ES)
+#include <qopengl.h>
+#include <GL/gl_private.h>
 #elif defined(__WXQT__) || defined(__WXGTK__)
 #include <GL/glew.h>
 #endif

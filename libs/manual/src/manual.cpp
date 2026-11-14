@@ -97,7 +97,13 @@ bool Manual::Launch(const std::string& entrypoint) {
   replace(path, "@ONLINE_PLUGROOT@", kOnlinePlugroot);
   replace(path, "@ONLINE_ROOT@", kOnlineRoot);
   replace(path, "@WIKI_ROOT@", kWikiRoot);
+#ifdef __OCPN__IOS__
+  // iOS: the "manual" plugin does not exist on iOS; open the online manual
+  // in Safari directly instead of showing a message about it.
+  wxLaunchDefaultBrowser(path);
+#else
   ManualDlg dlg(m_parent, path);
   dlg.ShowModal();
+#endif
   return true;
 }
