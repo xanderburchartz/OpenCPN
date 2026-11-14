@@ -33,6 +33,9 @@
 #include "pi_gl.h"
 
 #include "GribRequestDialog.h"
+#ifdef __OCPN__IOS__
+#include <QWidget>
+#endif
 #include "GribOverlayFactory.h"
 #include <wx/wfstream.h>
 #include "grib_pi.h"
@@ -347,6 +350,15 @@ void GribRequestSetting::OnClose(wxCloseEvent &event) {
 }
 
 void GribRequestSetting::SetRequestDialogSize() {
+#ifdef __OCPN__IOS__
+  // iOS: area spin controls as tall as an iOS field; with the desktop font
+  // height the digits were half cut off.
+  for (wxSpinCtrl *sp : {m_spMaxLat, m_spMaxLon, m_spMinLat, m_spMinLon}) {
+    const int h = wxMax(36, sp->GetBestSize().y);
+    sp->SetMinSize(wxSize(110, h));
+    if (QWidget *q = sp->GetHandle()) q->setMinimumHeight(h);
+  }
+#endif
   int y;
   /*first let's size the mail display space*/
   GetTextExtent(_T("abc"), nullptr, &y, 0, 0, OCPNGetFont(_("Dialog")));
