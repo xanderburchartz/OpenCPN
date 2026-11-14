@@ -28,9 +28,12 @@
 #ifdef __OCPN__IOS__
 
 class wxAuiManager;
+class wxFrame;
 
+void ocpnios_ApplySchemeColors(wxFrame *frame);
 void ocpnios_FloatPluginPanes(wxAuiManager *mgr);
 void ocpnios_HideBusyHud();
+void ocpnios_OnStartupDone();
 int ocpnios_OverlayInsetLeft();
 int ocpnios_OverlayInsetRight();
 void ocpnios_ShowBusyHud();
