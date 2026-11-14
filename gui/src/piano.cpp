@@ -32,6 +32,9 @@
 #include "model/gui_vars.h"
 #include "model/cutil.h"
 
+#ifdef __OCPN__IOS__
+#include "model/ios_hooks.h"
+#endif
 #include "chartbase.h"
 #include "chartdb.h"
 #include "chcanv.h"
@@ -770,7 +773,7 @@ wxString &Piano::GetStoredHash() { return m_hash; }
 void Piano::FormatKeys() {
   ocpnStyle::Style *style = g_StyleManager->GetCurrentStyle();
   int width = m_parentCanvas->GetClientSize().x;
-#ifdef __WXOSX__
+#if defined(__WXOSX__) || defined(__OCPN__IOS__)  // iOS: Retina like macOS
   if (g_bopengl) width *= m_parentCanvas->GetContentScaleFactor();
 #else
   width *= m_parentCanvas->GetContentScaleFactor();
@@ -815,6 +818,13 @@ void Piano::FormatKeys() {
       KeyRect.push_back(r);
       m_width = r.x + r.width;
     }
+#ifdef __OCPN__IOS__
+    // iOS: keep the chart bar clear of the rounded bottom-left corner.
+    int x0 = ocpnios_OverlayInsetLeft() *
+             (g_bopengl ? m_parentCanvas->GetContentScaleFactor() : 1);
+    for (auto &r : KeyRect) r.x += x0;
+    m_width += x0;
+#endif
   }
   m_nRegions = nKeys;
 }
@@ -830,7 +840,7 @@ wxPoint Piano::GetKeyOrigin(int key_index) {
 bool Piano::MouseEvent(wxMouseEvent &event) {
   int x, y;
   event.GetPosition(&x, &y);
-#ifdef __WXOSX__
+#if defined(__WXOSX__) || defined(__OCPN__IOS__)  // iOS: Retina like macOS
   if (g_bopengl) {
     x *= OCPN_GetDisplayContentScaleFactor();
     y *= OCPN_GetDisplayContentScaleFactor();
@@ -839,7 +849,7 @@ bool Piano::MouseEvent(wxMouseEvent &event) {
   y *= OCPN_GetDisplayContentScaleFactor();
 #endif
   int ytop = m_parentCanvas->GetCanvasHeight() - GetHeight();
-#ifdef __WXOSX__
+#if defined(__WXOSX__) || defined(__OCPN__IOS__)  // iOS: Retina like macOS
   if (!g_bopengl) ytop = m_parentCanvas->GetClientSize().y - GetHeight();
 #endif
 
@@ -949,7 +959,7 @@ void Piano::ResetRollover() {
 
 int Piano::GetHeight() {
   int height = 22;
-#ifdef __WXOSX__
+#if defined(__WXOSX__) || defined(__OCPN__IOS__)  // iOS: Retina like macOS
   if (g_bopengl) height *= m_parentCanvas->GetContentScaleFactor();
 #endif
   if (g_btouch) {

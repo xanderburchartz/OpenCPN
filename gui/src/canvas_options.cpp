@@ -204,6 +204,19 @@ CanvasOptions::CanvasOptions(wxWindow* parent)
   pSDepthUnits->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED,
                         wxCommandEventHandler(CanvasOptions::OnOptionChange),
                         NULL, this);
+#ifdef __OCPN__IOS__
+  m_iosNavobjects =
+      new wxCheckBox(pDisplayPanel, wxID_ANY, _("Show Navobjects"));
+  boxDisp->Add(m_iosNavobjects, verticalInputFlags);
+  m_iosNavobjects->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED,
+                           wxCommandEventHandler(CanvasOptions::OnOptionChange),
+                           NULL, this);
+  m_iosChartBar = new wxCheckBox(pDisplayPanel, wxID_ANY, _("Show Chart Bar"));
+  boxDisp->Add(m_iosChartBar, verticalInputFlags);
+  m_iosChartBar->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED,
+                         wxCommandEventHandler(CanvasOptions::OnOptionChange),
+                         NULL, this);
+#endif
 
   // AIS Options
   wxStaticBoxSizer* boxAIS = new wxStaticBoxSizer(
@@ -223,6 +236,38 @@ CanvasOptions::CanvasOptions(wxWindow* parent)
   pCBAttenAIS->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED,
                        wxCommandEventHandler(CanvasOptions::OnOptionChange),
                        NULL, this);
+#ifdef __OCPN__IOS__
+  m_iosHideMoored =
+      new wxCheckBox(pDisplayPanel, wxID_ANY, _("Hide Moored AIS Targets"));
+  boxAIS->Add(m_iosHideMoored, verticalInputFlags);
+  m_iosHideMoored->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED,
+                           wxCommandEventHandler(CanvasOptions::OnOptionChange),
+                           NULL, this);
+  m_iosAISTracks =
+      new wxCheckBox(pDisplayPanel, wxID_ANY, _("Show AIS Target Tracks"));
+  boxAIS->Add(m_iosAISTracks, verticalInputFlags);
+  m_iosAISTracks->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED,
+                          wxCommandEventHandler(CanvasOptions::OnOptionChange),
+                          NULL, this);
+  m_iosCPADialog =
+      new wxCheckBox(pDisplayPanel, wxID_ANY, _("Show CPA Alert Dialogs"));
+  boxAIS->Add(m_iosCPADialog, verticalInputFlags);
+  m_iosCPADialog->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED,
+                          wxCommandEventHandler(CanvasOptions::OnOptionChange),
+                          NULL, this);
+  m_iosCPASound =
+      new wxCheckBox(pDisplayPanel, wxID_ANY, _("Sound CPA Alarms"));
+  boxAIS->Add(m_iosCPASound, verticalInputFlags);
+  m_iosCPASound->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED,
+                         wxCommandEventHandler(CanvasOptions::OnOptionChange),
+                         NULL, this);
+  m_iosCPAWarn =
+      new wxCheckBox(pDisplayPanel, wxID_ANY, _("Show CPA Warnings"));
+  boxAIS->Add(m_iosCPAWarn, verticalInputFlags);
+  m_iosCPAWarn->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED,
+                        wxCommandEventHandler(CanvasOptions::OnOptionChange),
+                        NULL, this);
+#endif
 
   // spacer
   generalSizer->Add(0, interGroupSpace);
@@ -380,6 +425,9 @@ void CanvasOptions::RefreshControlValues() {
   // AIS Options
   pCBShowAIS->SetValue(parentCanvas->GetShowAIS());
   pCBAttenAIS->SetValue(parentCanvas->GetAttenAIS());
+#ifdef __OCPN__IOS__
+  IosRefreshControlValues(parentCanvas);  // app/ios/canvas_ios.cpp
+#endif
 
   // Tide/Current
   pCDOTides->SetValue(parentCanvas->GetbShowTide());
@@ -491,6 +539,10 @@ void CanvasOptions::UpdateCanvasOptions() {
     b_needRefresh = true;
   }
 
+#ifdef __OCPN__IOS__
+  IosUpdateCanvasOptions(parentCanvas,
+                         b_needRefresh);  // app/ios/canvas_ios.cpp
+#endif
   if (pCBAttenAIS->GetValue() != parentCanvas->GetAttenAIS()) {
     parentCanvas->SetAttenAIS(pCBAttenAIS->GetValue());
     b_needRefresh = true;
