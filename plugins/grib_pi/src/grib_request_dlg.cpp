@@ -34,6 +34,10 @@
 #include "pi_gl.h"
 
 #include "grib_request_dlg.h"
+#ifdef __OCPN__IOS__
+#include <QWidget>
+#include "folder.xpm"
+#endif
 #include "grib_overlay_factory.h"
 #include <wx/file.h>
 #include <wx/wfstream.h>
@@ -60,11 +64,100 @@ wxString toMailFormat(int NEflag,
 extern int m_SavedZoneSelMode;
 extern int m_ZoneSelMode;
 
+#ifdef __OCPN__IOS__
+// Form values and flat buttons, from the iOS app layer.
+void ocpnios_MarkFormValue(wxWindow *w);
+void ocpnios_FlatIconButtons(wxWindow *root);
+
+// Returns the sizer in the tree below root that holds child.
+static wxSizer *FindParentSizer(wxSizer *root, wxSizer *child) {
+  for (wxSizerItem *item : root->GetChildren()) {
+    wxSizer *sizer = item->GetSizer();
+    if (!sizer) continue;
+    if (sizer == child) return root;
+    if (wxSizer *found = FindParentSizer(sizer, child)) return found;
+  }
+  return nullptr;
+}
+
+// Adds a form row: label left, value and optional unit right, on the sheet
+// margin.
+static void AddFormRow(wxSizer *sizer, wxWindow *label, wxWindow *value,
+                       wxWindow *unit) {
+  wxBoxSizer *row = new wxBoxSizer(wxHORIZONTAL);
+  row->Add(label, 0, wxALIGN_CENTER_VERTICAL);
+  row->Add(value, 1, wxALIGN_CENTER_VERTICAL | wxLEFT, 12);
+  if (unit) row->Add(unit, 0, wxALIGN_CENTER_VERTICAL | wxLEFT, 6);
+  sizer->Add(row, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, 16);
+  ocpnios_MarkFormValue(value);
+}
+
+// The request dialog stacked to the width of a phone screen.
+void GribRequestSetting::SetCompactLayout() {
+  // Area: three columns (label, number, N/S or E/W) instead of six; side by
+  // side "E" and "W" were cut off. Numbers as tall as a field.
+  fgZoneCoordinatesSizer->SetCols(3);
+  fgZoneCoordinatesSizer->AddGrowableCol(0);
+  for (wxSpinCtrl *sp : {m_spMaxLat, m_spMaxLon, m_spMinLat, m_spMinLon}) {
+    sp->SetMinSize(wxSize(110, 36));
+    if (wxSizerItem *it = fgZoneCoordinatesSizer->GetItem(sp))
+      it->SetFlag(it->GetFlag() | wxALIGN_CENTER_VERTICAL | wxTOP);
+  }
+  for (wxSizerItem *it : fgZoneCoordinatesSizer->GetChildren())
+    it->SetFlag(it->GetFlag() | wxALIGN_CENTER_VERTICAL);
+
+  // The switch row spans the full width; otherwise its label wrapped with the
+  // switch halfway. Area choice and coordinates are stacked.
+  auto *zone =
+      dynamic_cast<wxFlexGridSizer *>(m_cUseSavedZone->GetContainingSizer());
+  if (zone) {
+    zone->AddGrowableCol(0);
+    if (wxSizerItem *it = zone->GetItem(m_cUseSavedZone))
+      it->SetFlag(it->GetFlag() | wxEXPAND);
+    if (auto *area = dynamic_cast<wxFlexGridSizer *>(
+            FindParentSizer(GetSizer(), zone))) {
+      area->SetCols(1);
+      area->AddGrowableCol(0);
+    }
+  }
+
+  // The area selection button with its iOS symbol too.
+  wxBitmap zoneBitmap = GRIBUICtrlBar::GetScaledBitmap(
+      wxBitmap(selzone), "selzone", m_parent.GetScaleFactor());
+  m_bpManualSelection->SetBitmapLabel(zoneBitmap);
+  m_bpManualSelection->SetBitmapPressed(zoneBitmap.ConvertToDisabled());
+
+  // World: model and forecast length as form rows and each button on its own
+  // row; side by side the buttons fell off the screen.
+  wxSizer *world = m_panelWorld->GetSizer();
+  // Deletes the row sizer; its controls are reused below.
+  world->Remove(m_btnDownloadWorld->GetContainingSizer());
+  if (wxSizerItem *it = world->GetItem(m_staticTextInfo)) {
+    it->SetFlag(wxLEFT | wxRIGHT | wxTOP);
+    it->SetBorder(16);
+  }
+  AddFormRow(world, m_stWorldModel, m_chWorldModel, nullptr);
+  AddFormRow(world, m_stForecastLength, m_spForecastLength,
+             m_stForecastLengthUnit);
+  world->Add(m_btnUpdateWorldModels, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP,
+             16);
+  world->Add(m_btnDownloadWorld, 0, wxEXPAND | wxALL, 16);
+  m_panelWorld->Layout();
+
+  // Bitmap buttons styled as iOS buttons.
+  ocpnios_FlatIconButtons(this);
+  Layout();
+}
+#endif
+
 //----------------------------------------------------------------------------------------------------------
 //          GRIB Request Implementation
 //----------------------------------------------------------------------------------------------------------
 GribRequestSetting::GribRequestSetting(GRIBUICtrlBar &parent)
     : GribRequestSettingBase(&parent), m_parent(parent) {
+#ifdef __OCPN__IOS__
+  SetCompactLayout();
+#endif
   m_VpFocus = nullptr;
   m_VpMouse = nullptr;
   m_oDC = nullptr;
@@ -358,6 +451,15 @@ void GribRequestSetting::OnClose(wxCloseEvent &event) {
 }
 
 void GribRequestSetting::SetRequestDialogSize() {
+#ifdef __OCPN__IOS__
+  // iOS: area spin controls as tall as an iOS field; with the desktop font
+  // height the digits were half cut off.
+  for (wxSpinCtrl *sp : {m_spMaxLat, m_spMaxLon, m_spMinLat, m_spMinLon}) {
+    const int h = wxMax(36, sp->GetBestSize().y);
+    sp->SetMinSize(wxSize(110, h));
+    if (QWidget *q = sp->GetHandle()) q->setMinimumHeight(h);
+  }
+#endif
   int y;
   /*first let's size the mail display space*/
   GetTextExtent("abc", nullptr, &y, nullptr, nullptr, OCPNGetFont(_("Dialog")));
