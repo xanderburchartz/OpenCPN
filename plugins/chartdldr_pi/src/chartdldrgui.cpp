@@ -9,7 +9,13 @@
 
 #include <wx/msgdlg.h>
 #include <wx/scrolwin.h>
+#include <wx/stdpaths.h>
 #include <wx/textwrapper.h>
+#include <wx/tokenzr.h>
+#ifdef __OCPN__IOS__
+#include <QCoreApplication>
+#include <QVariant>
+#endif
 
 #include "manual/manual.h"
 
@@ -159,8 +165,29 @@ DLDR_OCPNChartDirPanel::DLDR_OCPNChartDirPanel(wxWindow* parent, wxWindowID id,
 
 DLDR_OCPNChartDirPanel::~DLDR_OCPNChartDirPanel() = default;
 
+#ifdef __OCPN__IOS__
+// iOS: the path as the Files app shows it, relative to the app's Documents
+// folder; the full container path (with UUIDs) means nothing to the user.
+wxString ocpnios_DisplayPath(const wxString& path);  // app/ios/display_path.cpp
+static wxString IosShownDir(const wxString& dir) {
+  return ocpnios_DisplayPath(dir);
+}
+#endif
+
 void DLDR_OCPNChartDirPanel::SetText(wxString text) {
   m_ChartDir = text;
+#ifdef __OCPN__IOS__
+  {
+    const int w = std::max(100, GetSize().x - 12);
+    DLDR_ChartDirPanelHardBreakWrapper wrapper(this, IosShownDir(m_ChartDir),
+                                               w);
+    const int lines = static_cast<int>(wrapper.GetLineArray().GetCount());
+    SetMinSize(wxSize(-1, lines * GetCharHeight() + 12));
+    GetParent()->Layout();
+    Refresh();
+    return;
+  }
+#endif
 
   int maxWidth = GetParent()->GetSize().x * 75 / 100;
   DLDR_ChartDirPanelHardBreakWrapper wrapper(this, m_ChartDir, maxWidth);
@@ -176,6 +203,32 @@ void DLDR_OCPNChartDirPanel::OnPaint(wxPaintEvent& event) {
   int width, height;
   GetSize(&width, &height);
   wxPaintDC dc(this);
+#ifdef __OCPN__IOS__
+  // iOS: plain grey text on the card instead of a light blue bordered box.
+  {
+    const bool dark =
+        QCoreApplication::instance() &&
+        QCoreApplication::instance()->property("ocpnios_dark").toBool();
+    dc.SetPen(*wxTRANSPARENT_PEN);
+    dc.SetBrush(wxBrush(dark ? wxColour(0x1c, 0x1c, 0x1e) : *wxWHITE));
+    dc.DrawRectangle(0, 0, width, height);
+    dc.SetFont(*GetOCPNScaledFont_PlugIn(_("Dialog")));
+    dc.SetTextForeground(dark ? wxColour(0x8d, 0x8d, 0x93)
+                              : wxColour(0x6d, 0x6d, 0x72));
+    DLDR_ChartDirPanelHardBreakWrapper wrapper(this, IosShownDir(m_ChartDir),
+                                               std::max(100, width - 12));
+    int y = 6;
+    for (const wxString& line : wrapper.GetLineArray()) {
+      dc.DrawText(line, 6, y);
+      y += GetCharHeight();
+    }
+    if (height < y + 6) {
+      SetMinSize(wxSize(-1, y + 6));
+      GetParent()->Layout();
+    }
+    return;
+  }
+#endif
 
   dc.SetPen(*wxTRANSPARENT_PEN);
   dc.SetBrush(wxBrush(GetBackgroundColour()));
@@ -361,6 +414,16 @@ AddSourceDlg::AddSourceDlg(wxWindow* parent, wxWindowID id,
 void AddSourceDlg::OnNbPage(wxNotebookEvent& event) {
   if (event.GetSelection() == 1) {
     m_buttonChartDirectory->Enable();
+#ifdef __OCPN__IOS__
+    // iOS: propose the downloader's chart directory in Documents, never the
+    // app's internal directory. That one would be added as a chart directory
+    // and fully scanned on every database update (minutes on an iPhone).
+    if (m_tcChartDirectory->GetValue().IsEmpty()) {
+      wxString dir = wxStandardPaths::Get().GetDocumentsDir() + "/Charts";
+      m_tcChartDirectory->SetValue(dir);
+      m_panelChartDirectory->SetText(dir);
+    }
+#endif
   } else {
     wxTreeItemId item = m_treeCtrlPredefSrcs->GetSelection();
     ChartSource* cs = nullptr;
@@ -440,12 +503,23 @@ ChartDldrPanel::ChartDldrPanel(wxWindow* parent, wxWindowID id,
 
   //   Sources list box
   auto* activeListSizer = new wxBoxSizer(wxVERTICAL);
+#ifdef __OCPN__IOS__
+  // iOS: the list fills the rest of the page.
+  catalogPanelBoxSizer->Add(activeListSizer, 1, wxALL | wxEXPAND, 5);
+#else
   catalogPanelBoxSizer->Add(activeListSizer, 0, wxALL | wxEXPAND, 5);
+#endif
 
   m_lbChartSources =
       new wxListCtrl(catalogPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize,
                      wxLC_NO_SORT_HEADER | wxLC_REPORT | wxLC_SINGLE_SEL);
+#ifdef __OCPN__IOS__
+  // iOS: no 60 pt right margin; the list is as wide as the buttons below it.
+  activeListSizer->Add(m_lbChartSources, 1, wxEXPAND);
+
+#else
   activeListSizer->Add(m_lbChartSources, 1, wxEXPAND | wxRIGHT, 60);
+#endif
   /// m_lbChartSources->SetMinSize( wxSize( -1, 10 * GetCharHeight() ) );
 
   //  Buttons
@@ -500,6 +574,18 @@ ChartDldrPanel::ChartDldrPanel(wxWindow* parent, wxWindowID id,
   //  Chart list
   m_chartsLabel = new wxStaticText(chartsPanel, wxID_ANY, _("Charts"));
   chartsPanelBoxSizer->Add(m_chartsLabel, 0, wxALL, 4 * border_size);
+#if defined(__OCPN__IOS__) && !defined(CHART_LIST)
+  // iOS: toggle all charts at once. New charts are selected by default and
+  // "Select all"/"Deselect all" is only in the right-click menu; with many
+  // charts, picking just one took many taps.
+  m_cbAllCharts = new wxCheckBox(chartsPanel, wxID_ANY, _("Select all"));
+  m_cbAllCharts->SetValue(true);
+  chartsPanelBoxSizer->Add(m_cbAllCharts, 0, wxEXPAND | wxLEFT | wxRIGHT,
+                           4 * border_size);
+  m_cbAllCharts->Connect(
+      wxEVT_COMMAND_CHECKBOX_CLICKED,
+      wxCommandEventHandler(ChartDldrPanel::OnToggleAllCharts), nullptr, this);
+#endif
 
 #if defined(CHART_LIST)
   m_scrollWinChartList = new wxDataViewListCtrl(
@@ -532,9 +618,22 @@ ChartDldrPanel::ChartDldrPanel(wxWindow* parent, wxWindowID id,
 
   m_scrollWinChartList = new wxScrolledWindow(
       chartsPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxVSCROLL);
+#ifdef __OCPN__IOS__
+  chartsPanelBoxSizer->Add(m_scrollWinChartList, 1, wxEXPAND);  // fill the rest
+#else
   chartsPanelBoxSizer->Add(m_scrollWinChartList, 0, wxEXPAND);
+#endif
   m_scrollWinChartList->SetScrollRate(5, 5);
   m_scrollWinChartList->SetMinSize(wxSize(-1, 12 * GetCharHeight()));
+#ifdef __OCPN__IOS__
+  {
+    const bool dark =
+        QCoreApplication::instance() &&
+        QCoreApplication::instance()->property("ocpnios_dark").toBool();
+    m_scrollWinChartList->SetBackgroundColour(dark ? wxColour(0x1c, 0x1c, 0x1e)
+                                                   : *wxWHITE);
+  }
+#endif
 
 #ifdef HAVE_WX_GESTURE_EVENTS
   if (!m_scrollWinChartList->EnableTouchEvents(wxTOUCH_PRESS_GESTURES)) {
@@ -590,11 +689,20 @@ ChartDldrPanel::ChartDldrPanel(wxWindow* parent, wxWindowID id,
   m_bDnldCharts =
       new wxButton(chartsPanel, wxID_ANY, _("Download selected charts"),
                    wxDefaultPosition, wxDefaultSize, 0);
+#ifdef __OCPN__IOS__
+  // iOS: full width, like the buttons below the catalog list.
+  chartsPanelBoxSizer->Add(m_bDnldCharts, 0, wxEXPAND | wxALL, 5);
+#else
   chartsPanelBoxSizer->Add(m_bDnldCharts, 0, wxALIGN_LEFT | wxALL, 5);
+#endif
 
   m_stCatalogInfo = new wxStaticText(chartsPanel, wxID_ANY, "",
                                      wxDefaultPosition, wxDefaultSize, 0);
+#ifdef __OCPN__IOS__
+  chartsPanelBoxSizer->Add(m_stCatalogInfo, 0, wxEXPAND | wxALL, 5);
+#else
   chartsPanelBoxSizer->Add(m_stCatalogInfo, 1, wxEXPAND | wxALL, 5);
+#endif
   /// mainSizer->Add( m_stCatalogInfo, 0, wxEXPAND| wxALL, 5 );
 
 #endif /* CHART_LIST */
@@ -763,6 +871,17 @@ void ChartDldrPanel::OnSize(wxSizeEvent& event) {
   if (sz.y > sz.x)  // Portait mode
     ratio = 0.8;
 
+#ifdef __OCPN__IOS__
+  // iOS: the estimate above assumes the whole options page and ignores our
+  // header bar; the list got 475 pt and "Update" fell below the screen. Use a
+  // small minimum height instead; the list fills the rest of the tab
+  // (proportion 1 in the constructor) and the buttons below stay visible.
+  m_lbChartSources->SetMinSize(wxSize(-1, 160));
+  m_scrollWinChartList->SetMinSize(wxSize(-1, 160));
+  Layout();
+  event.Skip();
+  return;
+#endif
   m_lbChartSources->SetMinSize(wxSize(-1, static_cast<int>(yAvail * ratio)));
   m_scrollWinChartList->SetMinSize(
       wxSize(-1, static_cast<int>(yAvail * ratio)));
@@ -777,6 +896,36 @@ ChartPanel::ChartPanel(wxWindow* parent, wxWindowID id, const wxPoint& pos,
                        wxString latest, ChartDldrPanel* DldrPanel, bool bcheck)
     : wxPanel(parent, id, pos, size, wxBORDER_NONE) {
   wxString Descriptor = Name + "\n    " + stat + "   " + latest;
+#ifdef __OCPN__IOS__
+  // iOS: long chart names ran off the screen (a switch does not wrap its
+  // label). Wrap at word boundaries within the list width minus the switch.
+  {
+    // Use the whole panel width: the list itself is not laid out yet while
+    // filling.
+    int avail = parent->GetClientSize().x;
+    if (DldrPanel && DldrPanel->GetClientSize().x > avail)
+      avail = DldrPanel->GetClientSize().x;
+    avail -= 110;  // switch and margins
+    wxString wrapped, line;
+    if (avail > 120) {
+      wxStringTokenizer tk(Name, " ", wxTOKEN_RET_EMPTY);
+      while (tk.HasMoreTokens()) {
+        const wxString word = tk.GetNextToken();
+        const wxString cand = line.empty() ? word : line + " " + word;
+        if (!line.empty() && parent->GetTextExtent(cand).x > avail) {
+          wrapped += line + "\n";
+          line = word;
+        } else {
+          line = cand;
+        }
+      }
+      wrapped += line;
+    } else {
+      wrapped = Name;
+    }
+    Descriptor = wrapped + "\n" + stat + "   " + latest;
+  }
+#endif
   wxColour bColor;
   GetGlobalColor("DILG0", &bColor);
   bool bUseSysColors = false;
@@ -794,6 +943,15 @@ ChartPanel::ChartPanel(wxWindow* parent, wxWindowID id, const wxPoint& pos,
     }
   }
 
+#ifdef __OCPN__IOS__
+  // iOS: card color (as in an iOS list) instead of a grey block.
+  {
+    const bool dark =
+        QCoreApplication::instance() &&
+        QCoreApplication::instance()->property("ocpnios_dark").toBool();
+    bColor = dark ? wxColour(0x1c, 0x1c, 0x1e) : *wxWHITE;
+  }
+#endif
 #ifndef __WXOSX__
   wxWindow::SetBackgroundColour(bColor);
 #endif
