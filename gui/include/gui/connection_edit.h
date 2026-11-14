@@ -153,6 +153,11 @@ public:
   void AddOKCancelButtons();
   wxStdDialogButtonSizer *m_btnSizer;
   wxBoxSizer *m_btnSizerBox;
+#ifdef __OCPN__IOS__
+  wxStaticText *m_iosNavTitle = nullptr;  // title between Cancel and Done
+  wxString m_iosPropsLabel;
+  void IosAddNavButtons();  // app/ios/connections_ios.cpp
+#endif
 
   wxButton *m_btnOK;
   wxButton *m_btnCancel;

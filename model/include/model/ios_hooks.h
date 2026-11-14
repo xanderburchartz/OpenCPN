@@ -29,16 +29,49 @@
 
 #include <wx/string.h>
 
+class EventVar;
+class MyConfig;
 class wxAuiManager;
+class wxCheckBox;
+class wxDC;
+class wxDialog;
 class wxFrame;
+class wxGridCellRenderer;
+class wxPanel;
+class wxScrolledWindow;
+class wxSizer;
+class wxSizerFlags;
+class wxSpinCtrl;
+class wxStaticText;
+class wxTextCtrl;
+class wxWindow;
 
+void ocpnios_AddAlertButtons(wxDialog* dlg, wxSizer* topsizer, long style);
+void ocpnios_AddAlertTitle(wxDialog* dlg, wxSizer* topsizer,
+                           const wxString& caption);
+void ocpnios_AddSourceButtons(wxWindow* panel, wxSizer* vbox,
+                              EventVar& evt_add_connection);
 void ocpnios_ApplySchemeColors(wxFrame* frame);
+void ocpnios_ConfigLocaleResetOnce(MyConfig* cfg);
+void ocpnios_ConfigTextScaleDefault(MyConfig* cfg);
 wxString ocpnios_DisplayPath(const wxString& path);
+void ocpnios_DrawTtyMessage(wxWindow* win, wxDC& dc, const wxString& ws,
+                            int& data_pos, int y, int line_height);
 void ocpnios_FloatPluginPanes(wxAuiManager* mgr);
 void ocpnios_HideBusyHud();
+void ocpnios_MapBundleDataPath(wxString& val);
+void ocpnios_MapContainerChartDir(wxString& dirname, int& nAdjustChartDirs);
+void ocpnios_NetmaskRowLayout(wxPanel* row, wxStaticText* text,
+                              wxSpinCtrl* spin, const wxSizerFlags& flags);
+wxGridCellRenderer* ocpnios_NewSwitchCellRenderer();
+void ocpnios_NmeaFilterRowLayout(wxPanel* row, wxCheckBox*& checkbox,
+                                 wxTextCtrl*& filter_period);
 void ocpnios_OnStartupDone();
 int ocpnios_OverlayInsetLeft();
 int ocpnios_OverlayInsetRight();
+void ocpnios_RmdFitButtons(wxWindow* dlg, int margin, wxScrolledWindow* winr,
+                           wxScrolledWindow* wint, wxScrolledWindow* winw,
+                           wxScrolledWindow* winl);
 void ocpnios_ShowBusyHud();
 void ocpnios_ShowStartupBusy();
 wxString ocpnios_TcFull(const wxString& shown);

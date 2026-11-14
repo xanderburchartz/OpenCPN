@@ -62,6 +62,9 @@
 #include "priority_gui.h"
 #include "std_filesystem.h"
 #include "model/svg_utils.h"
+#ifdef __OCPN__IOS__
+#include "model/ios_hooks.h"
+#endif
 
 static wxString UtfArrowDown() { return wxString::FromUTF8(u8"\u25bc"); }
 static wxString UtfArrowRight() { return wxString::FromUTF8(u8"\u25ba"); }
@@ -263,6 +266,11 @@ public:
   void Draw(wxGrid& grid, wxGridCellAttr& attr, wxDC& dc, const wxRect& rect,
             int row, int col, bool isSelected) override {
     dc.SetBrush(wxBrush(GetGlobalColor("DILG1")));
+#ifdef __OCPN__IOS__
+    // iOS: no black border around each icon; light list background.
+    dc.SetPen(*wxTRANSPARENT_PEN);
+    dc.SetBrush(wxBrush(attr.GetBackgroundColour()));
+#endif
     if ((m_cs != GLOBAL_COLOR_SCHEME_DAY) && m_cs != GLOBAL_COLOR_SCHEME_RGB)
       dc.SetBrush(wxBrush(GetDialogColor(DLG_BACKGROUND)));
     if (IsWindows()) dc.SetBrush(wxBrush(GetGlobalColor("DILG1")));
@@ -416,6 +424,24 @@ public:
       SetLabelTextColour(GetGlobalColor("DILG3"));
     }
     HideRowLabels();
+#ifdef __OCPN__IOS__
+    // iOS: a list instead of a table, which did not fit the screen. No column
+    // headers; protocol and direction are shown below the name in column 1,
+    // columns 2 and 3 are hidden. Column widths are set on every resize, see
+    // IosLayoutColumns().
+    SetColLabelSize(0);
+    HideCol(2);
+    HideCol(3);
+    SetDefaultRowSize(2 * GetCharHeight() + 18, true);
+    SetGridLineColour(wxColour(220, 220, 225));
+    // No grid cursor (black frame around the tapped cell).
+    SetCellHighlightPenWidth(0);
+    SetCellHighlightROPenWidth(0);
+    Bind(wxEVT_SIZE, [&](wxSizeEvent& ev) {
+      ev.Skip();
+      CallAfter(&Connections::IosLayoutColumns);
+    });
+#endif
     SetColAttributes(parent);
 
     ReloadGrid(connections);
@@ -484,7 +510,13 @@ public:
       else
         m_tooltips[row][0] = _("Disabled, click to enable");
       std::string protocol = NavAddr::BusToString((*it)->GetCommProtocol());
+#ifdef __OCPN__IOS__
+      SetCellValue(row, 1,
+                   (*it)->GetStrippedDSPort() + "\n" + protocol + "  \u00b7  " +
+                       (*it)->GetIOTypeValueStr());
+#else
       SetCellValue(row, 1, protocol);
+#endif
       SetCellValue(row, 2, (*it)->GetIOTypeValueStr());
       SetCellValue(row, 3, (*it)->GetStrippedDSPort());
       m_tooltips[row][3] = (*it)->UserComment;
@@ -511,6 +543,9 @@ public:
     }
     OnConnectionChange(m_connections);
 
+#ifdef __OCPN__IOS__
+    IosLayoutColumns();
+#else
     if (IsAndroid()) {
       int ic = 0;
       for (auto val : m_header_column_widths) {
@@ -519,7 +554,23 @@ public:
       }
     } else
       AutoSize();
+#endif
   }
+
+#ifdef __OCPN__IOS__
+  /** iOS: switch | name (rest) | status | edit | delete. */
+  void IosLayoutColumns() {
+    const int w = GetClientSize().x;
+    if (w < 200) return;
+    const int sw = 66, st = 40, ed = 48, del = 48;
+    SetColSize(0, sw);
+    SetColSize(4, st);
+    SetColSize(5, ed);
+    SetColSize(6, del);
+    SetColSize(1, std::max(80, w - sw - st - ed - del - 2));
+    ForceRefresh();
+  }
+#endif
 
   /** std::sort support: Compare two ConnectionParams w r t state. */
   class ConnStateCompare {
@@ -586,6 +637,10 @@ private:
     auto enable_attr = new wxGridCellAttr();
     enable_attr->SetAlignment(wxALIGN_CENTRE, wxALIGN_CENTRE);
 
+#ifdef __OCPN__IOS__
+    enable_attr->SetRenderer(ocpnios_NewSwitchCellRenderer());
+    enable_attr->SetReadOnly(true);
+#else
     if (IsAndroid())
       enable_attr->SetRenderer(
           new BitmapEnableCellRenderer(wxWindow::GetCharWidth() * 3 / 2, m_cs));
@@ -593,6 +648,7 @@ private:
       enable_attr->SetRenderer(new wxGridCellBoolRenderer());
 
     enable_attr->SetEditor(new wxGridCellBoolEditor());
+#endif
     if (IsWindows()) enable_attr->SetBackgroundColour(GetGlobalColor("DILG1"));
     SetColAttr(0, enable_attr);
 
@@ -820,7 +876,9 @@ public:
     m_upload_options = new UploadOptionsChoice(this);
     sizer->Add(m_upload_options, flags);
     sizer->Add(new PrioritiesBtn(this), flags);
+#ifndef __OCPN__IOS__  // iOS: no size cap, it cut off "Filter period"
     wxWindow::SetMaxSize(max_size);
+#endif
   }
   void SetColorScheme(ColorScheme) {
     DimeControl(m_upload_options);
@@ -846,8 +904,15 @@ private:
     explicit UploadOptionsChoice(wxWindow* parent) : wxRadioBox() {
       wxArrayString wx_choices;
       for (auto& c : choices) wx_choices.Add(c);
+#ifdef __OCPN__IOS__
+      // iOS: the three choices stacked (one column). Side by side they did not
+      // fit on a phone: "Generic NMEA 018...".
+      Create(parent, wxID_ANY, _("Upload Format"), wxDefaultPosition,
+             wxDefaultSize, wx_choices, 1, wxRA_SPECIFY_COLS);
+#else
       Create(parent, wxID_ANY, _("Upload Format"), wxDefaultPosition,
              wxDefaultSize, wx_choices, 0, wxRA_SPECIFY_ROWS);
+#endif
       DimeControl(this);
       UploadOptionsChoice::Cancel();
     }
@@ -918,13 +983,20 @@ public:
   explicit AdvancedPanel(wxWindow* parent, wxSize max_size)
       : wxPanel(parent, wxID_ANY) {
     auto sizer = new wxStaticBoxSizer(wxVERTICAL, this, "");
+#ifdef __OCPN__IOS__
+    // iOS: white like the surrounding card (the rows inside are separate panels
+    // and were grey otherwise).
+    SetBackgroundColour(*wxWHITE);
+#endif
     sizer->Add(new BearingsCheckbox(this), wxSizerFlags().Expand());
     sizer->Add(new ExtraRmbRmcLine(this), wxSizerFlags().Expand());
     sizer->Add(new NmeaFilterRow(this), wxSizerFlags().Expand());
     sizer->Add(new TalkerIdRow(this), wxSizerFlags().Expand());
     sizer->Add(new NetmaskRow(this), wxSizerFlags().Expand());
     SetSizer(sizer);
+#ifndef __OCPN__IOS__  // iOS: no size cap, it cut off "Filter period"
     wxWindow::SetMaxSize(max_size);
+#endif
   }
 
 private:
@@ -957,10 +1029,18 @@ private:
   public:
     explicit ExtraRmbRmcLine(wxWindow* parent) : wxPanel(parent, wxID_ANY) {
       auto hbox = new wxBoxSizer(wxHORIZONTAL);
+#ifdef __OCPN__IOS__
+      // iOS: info button on the left, the row (text, switch on the right) fills
+      // the rest.
+      hbox->Add(new InfoButton(this, g_btouch, kInfoHeader, kInfo),
+                wxSizerFlags().Border(wxRIGHT).Center());
+      hbox->Add(new RmbRmcCheckbox(this), wxSizerFlags(1).Expand());
+#else
       hbox->Add(new RmbRmcCheckbox(this), wxSizerFlags().Expand());
       hbox->Add(1, 1, 1, wxEXPAND);
       hbox->Add(new InfoButton(this, g_btouch, kInfoHeader, kInfo),
                 wxSizerFlags().Border());
+#endif
       SetSizer(hbox);
       wxWindow::Layout();
       wxWindow::Show();
@@ -985,6 +1065,9 @@ private:
 
   public:
     explicit NmeaFilterRow(wxWindow* parent) : wxPanel(parent) {
+#ifdef __OCPN__IOS__
+      ocpnios_NmeaFilterRowLayout(this, checkbox, filter_period);
+#else
       auto hbox = new wxBoxSizer(wxHORIZONTAL);
       checkbox = new wxCheckBox(
           this, wxID_ANY,
@@ -997,6 +1080,7 @@ private:
       filter_period->SetValue(std::to_string(g_COGFilterSec));
       hbox->Add(filter_period, wxSizerFlags().Border());
       SetSizer(hbox);
+#endif
       NmeaFilterRow::Cancel();
     }
 
@@ -1033,6 +1117,10 @@ private:
             "only sentences created by OpenCPN, not those forwarded from other "
             "devices."));
       text_ctrl->SetValue(g_TalkerIdText);
+#ifdef __OCPN__IOS__
+      hbox->AddStretchSpacer(
+          1);  // iOS: value on the right, like the other rows
+#endif
       hbox->Add(text_ctrl, wxSizerFlags().Border());
       SetSizer(hbox);
       TalkerIdRow::Cancel();
@@ -1050,13 +1138,17 @@ private:
           m_spin_ctrl(new wxSpinCtrl(this, wxID_ANY)),
           m_text(new wxStaticText(this, wxID_ANY, "")) {
       m_spin_ctrl->SetRange(8, 32);
-      auto hbox = new wxBoxSizer(wxHORIZONTAL);
       auto flags = wxSizerFlags().Align(wxALIGN_CENTRE_VERTICAL).Border();
+#ifdef __OCPN__IOS__
+      ocpnios_NetmaskRowLayout(this, m_text, m_spin_ctrl, flags);
+#else
+      auto hbox = new wxBoxSizer(wxHORIZONTAL);
       hbox->Add(new wxStaticText(this, wxID_ANY, _("Netmask: ")), flags);
       hbox->Add(m_text, flags);
       hbox->Add(new wxStaticText(this, wxID_ANY, _("length (bits): ")), flags);
       hbox->Add(m_spin_ctrl, flags);
       SetSizer(hbox);
+#endif
       NetmaskRow::Cancel();
 
       Bind(wxEVT_SPINCTRL, [&](wxSpinEvent&) {
@@ -1096,9 +1188,16 @@ public:
     vbox->AddSpacer(wxWindow::GetCharHeight());
     auto conn_flags = wxSizerFlags().Border();
     if (IsAndroid()) conn_flags = wxSizerFlags().Border().Expand();
+#ifdef __OCPN__IOS__
+    conn_flags = wxSizerFlags().Border().Expand();
+#endif
     vbox->Add(conn_grid, conn_flags);
     vbox->Add(new AddConnectionButton(this, m_evt_add_connection, on_edit_conn),
               wxSizerFlags().Border());
+#ifdef __OCPN__IOS__
+    // iOS: "Find sources..." and "Data Monitor" buttons.
+    ocpnios_AddSourceButtons(this, vbox, m_evt_add_connection);
+#endif
     vbox->Add(0, wxWindow::GetCharHeight());  // Expanding spacer
     auto panel_flags =
         wxSizerFlags().Border(wxLEFT | wxDOWN | wxRIGHT).Expand();
@@ -1112,6 +1211,18 @@ public:
       advanced_panel->Show(show);
       vbox->SetSizeHints(this);
       vbox->Fit(this);
+#ifdef __OCPN__IOS__
+      // iOS: Fit() made the panel narrower than the page; the General/Extended
+      // boxes jumped to ~830 pt. Keep it page wide.
+      if (auto* scroller = dynamic_cast<wxScrolledWindow*>(GetParent())) {
+        const int w = scroller->GetClientSize().x;
+        if (w > GetSize().x) {
+          SetSize(w, GetSize().y);
+          Layout();
+        }
+        scroller->FitInside();
+      }
+#endif
     };
     vbox->Add(new ShowAdvanced(this, on_toggle), panel_flags);
     vbox->Add(advanced_panel, panel_flags.ReserveSpaceEvenIfHidden());
@@ -1155,7 +1266,11 @@ public:
             EventVar& evt_add_connection)
       : wxScrolledWindow(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize,
                          wxVSCROLL | wxHSCROLL, TopScrollWindowName) {
+#ifdef __OCPN__IOS__
+    ShowScrollbars(wxSHOW_SB_NEVER, wxSHOW_SB_DEFAULT);
+#else
     ShowScrollbars(wxSHOW_SB_NEVER, wxSHOW_SB_ALWAYS);
+#endif
     auto vbox = new wxBoxSizer(wxVERTICAL);
     SetSizer(vbox);
 

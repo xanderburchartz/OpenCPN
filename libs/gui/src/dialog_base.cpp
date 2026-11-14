@@ -77,6 +77,10 @@ void BaseDialog::SetInitialSize() {
   wxDialog::SetInitialSize(size);
 }
 
+#ifdef __OCPN__IOS__
+void ocpnios_FitDialogHtml(wxWindow* dlg, int& width, int& height);
+#endif
+
 void BaseDialog::AddHtmlContent(const std::stringstream& html) {
   std::string html_str = html.str();
 
@@ -98,6 +102,10 @@ void BaseDialog::AddHtmlContent(const std::stringstream& html) {
   html_window->SetBorders(0);
   html_window->GetVirtualSize(&html_width, &html_height);
   html_width += GUI::GetSpacing(this, kDialogPadding * 2);  // prevent scrollbar
+#ifdef __OCPN__IOS__
+  // iOS: limit the text to the app window, so the buttons stay on screen.
+  ocpnios_FitDialogHtml(this, html_width, html_height);  // window_fit.cpp
+#endif
   html_window->SetMinSize(
       wxSize(html_width, html_height));  // Fit() needs this size!
   html_window->SetBackgroundColour(GetBackgroundColour());

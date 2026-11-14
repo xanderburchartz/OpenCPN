@@ -330,6 +330,10 @@ RouteManagerDialog::RouteManagerDialog(wxWindow *parent) {
                               [&](wxCommandEvent) { UpdateRouteListCtrl(); });
 }
 
+#ifdef __OCPN__IOS__
+#include "model/ios_hooks.h"
+#endif
+
 void RouteManagerDialog::Create() {
   //  Get a text height metric for reference
   int char_width, char_height;
@@ -740,8 +744,15 @@ void RouteManagerDialog::Create() {
   bSizerWptContents->Add(m_pWptListCtrl, 1, wxEXPAND | wxALL, DIALOG_MARGIN);
   sbsWpts->Add(bSizerWptContents, 1, wxEXPAND, 5);
 
+#ifdef __OCPN__IOS__
+  // iOS: column wide enough for the header ("Icon" was truncated).
+  m_pWptListCtrl->InsertColumn(
+      colWPTICON, _("Icon"), wxLIST_FORMAT_LEFT,
+      wxMax(4 * char_width, GetTextExtent(_("Icon")).x * 13 / 10 + char_width));
+#else
   m_pWptListCtrl->InsertColumn(colWPTICON, _("Icon"), wxLIST_FORMAT_LEFT,
                                4 * char_width);
+#endif
   m_pWptListCtrl->InsertColumn(colWPTSCALE, _("Scale"), wxLIST_FORMAT_LEFT,
                                8 * char_width);
   m_pWptListCtrl->InsertColumn(colWPTNAME, _("Mark Name"), wxLIST_FORMAT_LEFT,
@@ -1001,6 +1012,10 @@ void RouteManagerDialog::Create() {
       wxCommandEventHandler(RouteManagerDialog::OnLayToggleListingClick), NULL,
       this);
 
+#ifdef __OCPN__IOS__
+  // iOS: list above the buttons, buttons in two columns.
+  ocpnios_RmdFitButtons(this, DIALOG_MARGIN, winr, wint, winw, winl);
+#endif
   RecalculateSize();
 
   int imageRefSize = m_charWidth * 2;  // g_Platform->GetDisplayDPmm() * 4;
@@ -1116,6 +1131,10 @@ void RouteManagerDialog::RecalculateSize() {
   sz.y = 30 * char_height;
 
   wxSize dsize = GetParent()->GetClientSize();
+#ifdef __OCPN__IOS__
+  // iOS: full screen (window_fit.cpp keeps it below the status bar).
+  sz = dsize;
+#endif
   sz.y = wxMin(sz.y, dsize.y);
   sz.x = wxMin(sz.x, dsize.x);
   SetClientSize(sz);

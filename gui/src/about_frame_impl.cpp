@@ -86,6 +86,10 @@ AboutFrameImpl::AboutFrameImpl(wxWindow* parent, wxWindowID id,
   m_hyperlinkHelp->SetURL(target);
 #if wxUSE_WEBVIEW && defined(HAVE_WEBVIEW)
   m_htmlWinHelp->LoadURL(target);
+#elif defined(__OCPN__IOS__)
+  // iOS: LoadFile expects a file name, not a file:// URL. Given the URL,
+  // wxHtmlWindow appended it to the bundle dir (".../opencpn.app/file:/...").
+  m_htmlWinHelp->LoadFile(wxFileName(target.Mid(wxStrlen("file://"))));
 #else
   m_htmlWinHelp->LoadFile(target);
 #endif
@@ -98,10 +102,18 @@ AboutFrameImpl::AboutFrameImpl(wxWindow* parent, wxWindowID id,
                EXTEND_HEIGHT;
 
   SetMinSize(wxSize(width, height));
+#ifdef __OCPN__IOS__
+  IosPhoneLayout();  // app/ios/dialogs_ios.cpp
+#endif
   RecalculateSize();
 }
 
 void AboutFrameImpl::OnLinkHelp(wxHyperlinkEvent& event) {
+#ifdef __OCPN__IOS__
+  // iOS: open the online manual instead (app/ios/dialogs_ios.cpp).
+  IosLaunchManual();
+  return;
+#endif
 #ifdef __WXGTK__
   wxString testFile = wxString::Format(
       "/%s/doc/help_web.html", g_BasePlatform->GetSharedDataDir().c_str());
@@ -123,15 +135,25 @@ void AboutFrameImpl::OnLinkHelp(wxHyperlinkEvent& event) {
     m_htmlWinLicense->Hide();
     m_htmlWinHelp->Show();
     m_scrolledWindowAbout->Hide();
+#ifndef __OCPN__IOS__
+    // iOS: a single local help page; "< Back" only cost a column of space.
     m_btnBack->Show();
+#endif
 #if wxUSE_WEBVIEW && defined(HAVE_WEBVIEW)
     m_btnBack->Enable(m_htmlWinHelp->CanGoBack());
 #else
     m_btnBack->Enable(m_htmlWinHelp->HistoryCanBack());
 #endif
+#ifdef __OCPN__IOS__
+    // iOS: the sheet keeps its full size. SetSize to 90% of the main window
+    // made it a strip whose title bar (Done) was off screen, so it could not be
+    // closed.
+    Layout();
+#else
     wxSize parentSize = m_parent->GetSize();
     SetSize(wxSize(parentSize.x * 9 / 10, parentSize.y * 9 / 10));
     Centre();
+#endif
   }
 }
 

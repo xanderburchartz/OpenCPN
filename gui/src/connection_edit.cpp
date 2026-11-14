@@ -193,6 +193,10 @@ void ConnectionEditDialog::SetInitialSettings() {
 }
 
 void ConnectionEditDialog::AddOKCancelButtons() {
+#ifdef __OCPN__IOS__
+  IosAddNavButtons();  // app/ios/connections_ios.cpp
+  return;
+#endif
 #ifndef ANDROID
   if (!m_btnSizer) {
     m_btnSizer = new wxStdDialogButtonSizer();
@@ -307,7 +311,11 @@ void ConnectionEditDialog::Init() {
       new wxRadioButton(this, wxID_ANY, _("Serial"), wxDefaultPosition,
                         wxDefaultSize, wxRB_GROUP);
   m_rbTypeSerial->SetValue(TRUE);
+#ifdef __OCPN__IOS__
+  m_rbTypeSerial->Hide();  // iOS: no serial port on iPhone/iPad
+#else
   bSizer15->Add(m_rbTypeSerial, 0, wxALL, 5);
+#endif
 
   m_rbTypeNet = new wxRadioButton(this, wxID_ANY, _("Network"),
                                   wxDefaultPosition, wxDefaultSize, 0);
@@ -828,6 +836,14 @@ void ConnectionEditDialog::SetSelectedConnectionPanel(
 }
 
 void ConnectionEditDialog::SetPropsLabel(wxString label) {
+#ifdef __OCPN__IOS__
+  // iOS: the title is in the title bar (AddOKCancelButtons), the box has no
+  // caption.
+  m_iosPropsLabel = label;
+  if (m_iosNavTitle) m_iosNavTitle->SetLabel(label);
+  m_sbConnEdit->SetLabel(wxEmptyString);
+  return;
+#endif
   m_sbConnEdit->SetLabel(label);
 }
 
@@ -957,7 +973,11 @@ void ConnectionEditDialog::OnUploadFormatChange(wxCommandEvent& event) {
 #endif
 
 void ConnectionEditDialog::ShowTypeCommon(bool visible) {
+#ifdef __OCPN__IOS__
+  m_rbTypeSerial->Show(false);  // iOS: no serial port
+#else
   m_rbTypeSerial->Show(visible);
+#endif
   m_rbTypeNet->Show(visible);
 #if defined(__linux__) && !defined(__ANDROID__) && !defined(__WXOSX__)
   m_rbTypeCAN->Show(visible);
@@ -1543,6 +1563,11 @@ void ConnectionEditDialog::SetDefaultConnectionParams() {
 #endif
 
 #ifdef __WXOSX__
+  bserial = FALSE;
+#endif
+#ifdef __OCPN__IOS__
+  // iOS: an iPhone/iPad has no serial port; new connections start as network
+  // connections.
   bserial = FALSE;
 #endif
 
