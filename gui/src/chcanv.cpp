@@ -4726,6 +4726,11 @@ void ChartCanvas::DoZoomCanvas(double factor, bool can_zoom_to_cursor) {
 
   //    Cannot allow Yield() re-entrancy here
   if (m_bzooming) return;
+  // Stop a running jump animation, it would reset the scale every frame.
+  if (m_animationActive) {
+    m_easeTimer.Stop();
+    m_animationActive = false;
+  }
   m_bzooming = true;
 
   double old_ppm = GetVP().view_scale_ppm;
