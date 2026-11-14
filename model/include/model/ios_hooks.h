@@ -27,17 +27,22 @@
 
 #ifdef __OCPN__IOS__
 
+#include <wx/string.h>
+
 class wxAuiManager;
 class wxFrame;
 
-void ocpnios_ApplySchemeColors(wxFrame *frame);
-void ocpnios_FloatPluginPanes(wxAuiManager *mgr);
+void ocpnios_ApplySchemeColors(wxFrame* frame);
+wxString ocpnios_DisplayPath(const wxString& path);
+void ocpnios_FloatPluginPanes(wxAuiManager* mgr);
 void ocpnios_HideBusyHud();
 void ocpnios_OnStartupDone();
 int ocpnios_OverlayInsetLeft();
 int ocpnios_OverlayInsetRight();
 void ocpnios_ShowBusyHud();
 void ocpnios_ShowStartupBusy();
+wxString ocpnios_TcFull(const wxString& shown);
+wxString ocpnios_TcShow(const wxString& full);
 void ocpnios_TidyDocuments();
 void ocpnios_WaitUntilActive();
 
