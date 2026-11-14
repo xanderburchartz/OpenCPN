@@ -232,6 +232,23 @@ bool grib_pi::MouseEventHook(wxMouseEvent &event) {
 
 void grib_pi::ShowPreferencesDialog(wxWindow *parent) {
   GribPreferencesDialog *Pref = new GribPreferencesDialog(parent);
+#ifdef __OCPN__IOS__
+  // The directory box belongs in the scrolled window, like its content; with
+  // the dialog as parent its title overlapped the radio buttons above.
+  if (auto *folder = dynamic_cast<wxStaticBoxSizer *>(
+          Pref->m_textDirectory->GetContainingSizer())) {
+    wxWindow *scrollWin = Pref->m_textDirectory->GetParent();
+    wxWindow *browse = folder->GetItem((size_t)1)->GetWindow();
+    auto *box = new wxStaticBox(scrollWin, wxID_ANY,
+                                folder->GetStaticBox()->GetLabel());
+    box->Lower();  // below the controls it frames
+    auto *moved = new wxStaticBoxSizer(box, wxHORIZONTAL);
+    // Deletes the old sizer and its box; the controls are added again below.
+    scrollWin->GetSizer()->Replace(folder, moved);
+    moved->Add(Pref->m_textDirectory, 1, wxALL, 5);
+    moved->Add(browse, 0, wxALL, 5);
+  }
+#endif
 
   DimeWindow(Pref);     // aplly global colours scheme
   SetDialogFont(Pref);  // Apply global font

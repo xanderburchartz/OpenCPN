@@ -165,6 +165,9 @@ private:
   void OnSpacingModeChange(wxCommandEvent& event);
   void OnPageChange(wxNotebookEvent& event);
   void OnCtrlandDataStyleChanged(wxCommandEvent& event);
+#ifdef __OCPN__IOS__
+  void SetCompactLayout();
+#endif
 
   GRIBUICtrlBar& m_parent;
 

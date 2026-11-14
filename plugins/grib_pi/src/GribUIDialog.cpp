@@ -46,10 +46,19 @@
 #include "email.h"
 #include "folder.xpm"
 #include "GribUIDialog.h"
+#ifdef __OCPN__IOS__
+#include <QWidget>
+#endif
 #include <wx/arrimpl.cpp>
 
 #ifdef __ANDROID__
 #include "android_jvm.h"
+#endif
+
+#ifdef __OCPN__IOS__
+// iOS symbols and flat buttons, from the iOS app layer.
+wxBitmap ocpnios_PluginSymbol(const char *symbol, int pointSize);
+void ocpnios_FlatIconButtons(wxWindow *root);
 #endif
 
 // general variables
@@ -187,6 +196,9 @@ GRIBUICtrlBar::GRIBUICtrlBar(wxWindow *parent, wxWindowID id,
 
   wxFileConfig *pConf = GetOCPNConfigObject();
 
+#ifdef __OCPN__IOS__
+  SetCompactLayout();
+#endif
   m_gGrabber = new GribGrabberWin(this);  // add the grabber to the dialog
   m_fgCtrlGrabberSize->Add(m_gGrabber, 0, wxALL, 0);
 
@@ -253,6 +265,43 @@ GRIBUICtrlBar::GRIBUICtrlBar(wxWindow *parent, wxWindowID id,
 
     pConf->SetPath(_T ( "/Directories" ));
     pConf->Read(_T ( "GRIBDirectory" ), &m_grib_dir);
+#ifdef __OCPN__IOS__
+    // iOS: every install gives the app a new container directory, so saved
+    // absolute paths point to a directory that no longer exists and the last
+    // GRIB file was not loaded. Use the same file name under Documents. GRIB
+    // files get their own Documents/GRIB folder ("OpenCPN > GRIB" in the Files
+    // app) instead of lying loose next to Charts and log; loose ones are moved
+    // there.
+    {
+      wxString docs = wxStandardPaths::Get().GetDocumentsDir();
+      wxString gribs = docs + wxFileName::GetPathSeparator() + _T("GRIB");
+      if (!wxDir::Exists(gribs))
+        wxFileName::Mkdir(gribs, 0755, wxPATH_MKDIR_FULL);
+      {
+        wxArrayString loose;
+        wxDir::GetAllFiles(docs, &loose, wxEmptyString, wxDIR_FILES);
+        for (const wxString &f : loose) {
+          wxString ext = wxFileName(f).GetExt().Lower();
+          if (ext == _T("grb") || ext == _T("grb2") || ext == _T("grib") ||
+              ext == _T("grib2"))
+            wxRenameFile(f,
+                         gribs + wxFileName::GetPathSeparator() +
+                             wxFileName(f).GetFullName(),
+                         false);
+        }
+      }
+      wxString d = m_grib_dir;
+      while (d.EndsWith(_T("/"))) d.RemoveLast();
+      if (!wxDir::Exists(m_grib_dir) || d == docs) m_grib_dir = gribs;
+      for (size_t i = 0; i < m_file_names.GetCount(); i++) {
+        if (wxFileName::FileExists(m_file_names[i])) continue;
+        const wxString name = wxFileName(m_file_names[i]).GetFullName();
+        wxFileName moved(gribs, name);
+        if (!moved.FileExists()) moved = wxFileName(docs, name);
+        if (moved.FileExists()) m_file_names[i] = moved.GetFullPath();
+      }
+    }
+#endif
 
     pConf->SetPath(_T( "/PlugIns/GRIB" ));
     pConf->Read(_T( "ManualRequestZoneSizing" ), &m_SavedZoneSelMode, 0);
@@ -382,6 +431,88 @@ GRIBUICtrlBar::~GRIBUICtrlBar() {
   delete m_pTimelineSet;
 }
 
+#ifdef __OCPN__IOS__
+// The wide bar does not fit on an iPhone. Use the compact layout of Android,
+// keeping the open file and request buttons that Android has elsewhere.
+void GRIBUICtrlBar::SetCompactLayout() {
+  // As on Android, the grabber and the boat projection are not shown.
+  m_fgCtrlBarSizer->Detach(m_fgCtrlGrabberSize);
+  m_fgCtrlBarSizer = new wxFlexGridSizer(0, 1, 0, 0);
+  m_fgCtrlBarSizer->AddGrowableCol(0);
+  m_fgCtrlBarSizer->SetFlexibleDirection(wxHORIZONTAL);
+  m_fgCtrlBarSizer->SetNonFlexibleGrowMode(wxFLEX_GROWMODE_NONE);
+  // Deletes the wide layout; its controls are reused below.
+  SetSizer(m_fgCtrlBarSizer);
+  m_ProjectBoatPanel->Destroy();
+  m_ProjectBoatPanel = nullptr;
+
+  wxBoxSizer *mainBox = new wxBoxSizer(wxVERTICAL);
+  m_fgCtrlBarSizer->Add(mainBox, 1, wxEXPAND, 0);
+
+  // The time spans the row between the arrows, which keep the sheet margin.
+  wxBoxSizer *timeRow = new wxBoxSizer(wxHORIZONTAL);
+  mainBox->Add(timeRow, 0, wxEXPAND, 5);
+  timeRow->Add(m_bpPrev, 0, wxLEFT, 8);
+  timeRow->Add(m_cRecordForecast, 1, wxALIGN_CENTER_VERTICAL | wxLEFT | wxRIGHT,
+               4);
+  timeRow->Add(m_bpNext, 0, wxRIGHT, 8);
+
+  // The time slider gets the free space between the buttons.
+  wxBoxSizer *buttonRow = new wxBoxSizer(wxHORIZONTAL);
+  mainBox->Add(buttonRow, 0, wxEXPAND, 5);
+  buttonRow->Add(m_bpAltitude, 0, wxALL, 1);
+  buttonRow->Add(m_bpNow, 0, wxALL, 1);
+  buttonRow->Add(m_bpZoomToCenter, 0, wxALL, 1);
+  buttonRow->Add(m_bpShowCursorData, 0, wxALL, 1);
+  buttonRow->Add(m_bpPlay, 0, wxBOTTOM | wxLEFT | wxTOP, 1);
+  m_sTimeline->SetMinSize(wxSize(80, -1));
+  buttonRow->Add(m_sTimeline, 1, wxEXPAND | wxLEFT | wxRIGHT, 4);
+  buttonRow->Add(m_bpOpenFile, 0, wxALL, 1);
+  buttonRow->Add(m_bpSettings, 0, wxALL, 1);
+  buttonRow->Add(m_bpRequest, 0, wxALL, 1);
+
+  m_fgCDataSizer = new wxFlexGridSizer(0, 2, 0, 0);
+  m_fgCDataSizer->SetFlexibleDirection(wxVERTICAL);
+  m_fgCDataSizer->AddGrowableCol(0);
+  m_fgCDataSizer->SetNonFlexibleGrowMode(wxFLEX_GROWMODE_SPECIFIED);
+  mainBox->Add(m_fgCDataSizer, 1, wxEXPAND, 5);
+
+  ocpnios_FlatIconButtons(this);
+  // A bottom panel below the chart (app/ios/window_fit.cpp), even when the
+  // cursor data makes the bar taller than 40% of the screen.
+  if (QWidget *q = GetHandle()) q->setProperty("ocpnios_panel", true);
+}
+
+wxBitmap GRIBUICtrlBar::GetScaledBitmap(wxBitmap bitmap,
+                                        const wxString svgFileName,
+                                        double scale_factor) {
+  // Same meaning per button; unknown names keep the bitmap.
+  static const char *const kSymbols[][2] = {
+      {"prev", "chevron.left"},
+      {"next", "chevron.right"},
+      {"altitude", "square.3.layers.3d"},
+      {"now", "clock.arrow.circlepath"},
+      {"zoomto", "viewfinder"},
+      {"curdata", "list.bullet.rectangle.fill"},
+      {"ncurdata", "list.bullet.rectangle"},
+      {"play", "play.fill"},
+      {"stop", "stop.fill"},
+      {"openfile", "folder"},
+      {"setting", "gearshape"},
+      {"request", "icloud.and.arrow.down"},
+      {"request_end", "checkmark.icloud"},
+      {"selzone", "rectangle.dashed"},
+  };
+  for (const auto &s : kSymbols) {
+    if (svgFileName != s[0]) continue;
+    wxBitmap symbol = ocpnios_PluginSymbol(s[1], 20);
+    if (symbol.IsOk()) return symbol;
+    break;
+  }
+  return GRIBUICtrlBarBase::GetScaledBitmap(bitmap, svgFileName, scale_factor);
+}
+#endif
+
 void GRIBUICtrlBar::SetScaledBitmap(double factor) {
   //  Round to the nearest "quarter", to avoid rendering artifacts
   m_ScaledFactor = wxRound(factor * 4.0) / 4.0;
@@ -411,7 +542,7 @@ void GRIBUICtrlBar::SetScaledBitmap(double factor) {
 
   // Careful here, this MinSize() sets the final width of the control bar,
   // overriding the width of the wxChoice above it.
-#ifdef __OCPN__ANDROID__
+#if defined(__OCPN__ANDROID__) || defined(__OCPN__IOS__)
   m_sTimeline->SetSize(wxSize(20 * m_ScaledFactor, -1));
   m_sTimeline->SetMinSize(wxSize(20 * m_ScaledFactor, -1));
 #else
@@ -462,6 +593,20 @@ void GRIBUICtrlBar::OpenFile(bool newestFile) {
   ArrayOfGribRecordSets *rsa = m_bGRIBActiveFile->GetRecordSetArrayPtr();
   wxString title;
   if (m_bGRIBActiveFile->IsOK()) {
+#ifdef __OCPN__IOS__
+    // iOS: upstream saves the directory and file names only in ~GRIBUICtrlBar.
+    // iOS terminates the app without running it, so the last file was lost
+    // after a restart. Write it immediately.
+    if (wxFileConfig *cfg = GetOCPNConfigObject()) {
+      cfg->DeleteGroup(_T("/Settings/GRIB/FileNames"));
+      cfg->SetPath(_T("/Settings/GRIB/FileNames"));
+      for (unsigned int i = 0; i < m_file_names.GetCount(); i++)
+        cfg->Write(wxString::Format(_T("Filename%u"), i), m_file_names[i]);
+      cfg->SetPath(_T("/Directories"));
+      cfg->Write(_T("GRIBDirectory"), m_grib_dir);
+      cfg->Flush();
+    }
+#endif
     wxFileName fn(m_bGRIBActiveFile->GetFileNames()[0]);
     title = (_("File: "));
     title.Append(fn.GetFullName());
@@ -1741,6 +1886,27 @@ void GRIBUICtrlBar::PopulateComboDataList() {
     m_cRecordForecast->Append(toUsrDateTimeFormat_Plugin(t));
   }
   m_cRecordForecast->SetSelection(index);
+#ifdef __OCPN__IOS__
+  // iOS: the choice got its width when the bar opened, while it only held
+  // "Item0", and then showed just the first letter of the date. Size it to the
+  // longest time plus room for the arrow.
+  {
+    int w = 0;
+    for (unsigned int i = 0; i < m_cRecordForecast->GetCount(); i++)
+      w = wxMax(
+          w,
+          m_cRecordForecast->GetTextExtent(m_cRecordForecast->GetString(i)).x);
+    const int need = w + 60;
+    m_cRecordForecast->SetMinSize(wxSize(need, -1));
+    m_cRecordForecast->SetMaxSize(wxSize(-1, -1));
+    if (QWidget *q = m_cRecordForecast->GetHandle()) {
+      q->setMaximumWidth(QWIDGETSIZE_MAX);
+      q->setMinimumWidth(need);
+    }
+    Layout();
+    Fit();
+  }
+#endif
 }
 
 void GRIBUICtrlBar::OnZoomToCenterClick(wxCommandEvent &event) {

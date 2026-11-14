@@ -236,6 +236,9 @@ public:
 private:
   void HighlightArea(double latmax, double lonmax, double latmin,
                      double lonmin);
+#ifdef __OCPN__IOS__
+  void SetCompactLayout();
+#endif
   void ReadLocalCatalog();
   void FillTreeCtrl(wxJSONValue &data);
   void ApplyRequestConfig(unsigned rs, unsigned it, unsigned tr);

@@ -24,6 +24,9 @@
 
 #include "grib_pi.h"
 #include "folder.xpm"
+#ifdef __OCPN__IOS__
+#include <QWidget>
+#endif
 
 static const wxString units0_names[] = {
     _("Knots"), _("m/s"), _("mph"), _("km/h"), _("Beaufort"), wxEmptyString};
@@ -644,6 +647,92 @@ double GribOverlaySettings::GetMax(int settings) {
   return CalibrateValue(settings, max);
 }
 
+#ifdef __OCPN__IOS__
+// Puts a value and the label in the grid cell before it on one row, in the
+// label's place. The value fills the rest of the row.
+static void JoinFormRow(wxFlexGridSizer *grid, wxWindow *value) {
+  size_t index = 0;
+  for (wxSizerItem *item : grid->GetChildren()) {
+    if (item->GetWindow() == value) break;
+    index++;
+  }
+  if (index == 0 || index == grid->GetItemCount()) return;
+  wxWindow *label = grid->GetItem(index - 1)->GetWindow();
+  if (!label) return;
+  label->SetMinSize(wxDefaultSize);
+  grid->Detach(label);
+  grid->Detach(value);
+  wxBoxSizer *row = new wxBoxSizer(wxHORIZONTAL);
+  row->Add(label, 0, wxALIGN_CENTER_VERTICAL | wxALL, 5);
+  row->Add(value, 1, wxALIGN_CENTER_VERTICAL | wxALL, 5);
+  grid->Insert(index - 1, row, 0, wxEXPAND, 0);
+}
+
+// Puts a spacing number next to "Spacing (pixels)", right-aligned, with
+// Fixed and Minimum below; the empty cell below the label is dropped.
+static void MoveSpacingNumber(wxFlexGridSizer *grid, wxSizer *from,
+                              wxWindow *spin, wxFlexGridSizer *holder) {
+  if (!grid) return;
+  if (grid->GetItemCount() > 2 && grid->GetItem((size_t)2)->IsSpacer())
+    grid->Remove(2);
+  from->Detach(spin);
+  grid->Insert(1, spin, 0, wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT | wxALL, 5);
+  grid->AddGrowableCol(0);
+  if (holder && !holder->IsColGrowable(0)) holder->AddGrowableCol(0);
+}
+
+// The settings pages are stacked to the width of a phone screen.
+void GribSettingsDialog::SetCompactLayout() {
+  // Data page: one column instead of item | options | more options, with each
+  // label and value on one row. ShowSettings still shows and hides controls.
+  auto *grid =
+      dynamic_cast<wxFlexGridSizer *>(m_cDataUnits->GetContainingSizer());
+  if (grid) {
+    grid->SetCols(1);
+    grid->AddGrowableCol(0);
+    JoinFormRow(grid, m_cDataUnits);
+    JoinFormRow(grid, m_cOverlayColors);
+    JoinFormRow(grid, m_sParticleDensity);
+    MoveSpacingNumber(dynamic_cast<wxFlexGridSizer *>(
+                          m_cBarbArrFixSpac->GetContainingSizer()),
+                      m_fgBarbedData2, m_sBarbArrSpacing, m_fgBarbedData1);
+    MoveSpacingNumber(
+        dynamic_cast<wxFlexGridSizer *>(m_cDirArrFixSpac->GetContainingSizer()),
+        m_fgDirArrData2, m_sDirArrSpacing, m_fgDirArrData1);
+    MoveSpacingNumber(m_fgNumData1, grid, m_sNumbersSpacing, nullptr);
+    // Inset like the card around it (app/ios/fit_width.cpp), or the choices
+    // and switches overflow the card edge.
+    if (wxSizerItem *it = m_fgSetDataSizer->GetItem(grid, true)) {
+      it->SetFlag(wxEXPAND | wxLEFT | wxRIGHT);
+      it->SetBorder(20);
+    }
+  }
+
+  // Playback page: rows without indent, the control fills the rest of the row.
+  wxWindow *const playbackControls[] = {m_sUpdatesPerSecond, m_cLoopStartPoint,
+                                        m_sSlicesPerUpdate};
+  for (wxWindow *control : playbackControls) {
+    auto *row = dynamic_cast<wxFlexGridSizer *>(control->GetContainingSizer());
+    if (!row) continue;
+    row->GetItem((size_t)0)->SetBorder(0);
+    row->AddGrowableCol(2);
+  }
+  if (auto *playback =
+          dynamic_cast<wxFlexGridSizer *>(m_cLoopMode->GetContainingSizer())) {
+    playback->AddGrowableCol(0);
+    if (wxSizerItem *it =
+            playback->GetItem(m_cLoopStartPoint->GetContainingSizer()))
+      it->SetFlag(wxALL | wxEXPAND);
+  }
+
+  // GUI page: the names get the free width; otherwise "Data at cursor"
+  // wrapped mid-word.
+  if (auto *gui = dynamic_cast<wxFlexGridSizer *>(
+          m_biShowCursorData->GetContainingSizer()))
+    gui->AddGrowableCol(1);
+}
+#endif
+
 GribSettingsDialog::GribSettingsDialog(GRIBUICtrlBar &parent,
                                        GribOverlaySettings &Settings,
                                        int &lastdatatype, int fileIntervalIndex)
@@ -651,6 +740,9 @@ GribSettingsDialog::GribSettingsDialog(GRIBUICtrlBar &parent,
       m_parent(parent),
       m_extSettings(Settings),
       m_lastdatatype(lastdatatype) {
+#ifdef __OCPN__IOS__
+  SetCompactLayout();
+#endif
   m_Settings = m_extSettings;
   // populate interval choice
   m_sSlicesPerUpdate->Clear();
@@ -753,6 +845,58 @@ void GribSettingsDialog::OnPageChange(wxNotebookEvent &event) {
 }
 
 void GribSettingsDialog::SetSettingsDialogSize() {
+#ifdef __OCPN__IOS__
+  // iOS: the dialog becomes a full-screen sheet (app/ios/window_fit.cpp). The
+  // sizing below gave the pages their content width, at most screen - 80 pt:
+  // clipped on the right and scrolling horizontally. Here: scroll vertically
+  // only and let the sheet set the width; app/ios/fit_width.cpp lays out the
+  // rows to the screen width. Height: what remains beside the header bar
+  // (window_fit), tab bar and Apply button; with a 10 pt minimum the pages
+  // disappeared (only the button showed).
+  int availH = 400, availW = -1;
+  if (wxWindow *frame = wxTheApp->GetTopWindow()) {
+    availH = frame->GetClientSize().y - 2 * m_sButton->GetSize().GetY() - 140;
+    availW = frame->GetClientSize().x;
+  }
+  availH = wxMax(200, availH);
+  // Limit the width: the notebook took the width of the widest page (GUI),
+  // after which the Data page ran off the screen.
+  if (availW > 100) m_nSettingsBook->SetMaxSize(wxSize(availW, -1));
+  for (size_t i = 0; i < m_nSettingsBook->GetPageCount(); i++) {
+    auto *sc = dynamic_cast<wxScrolledWindow *>(m_nSettingsBook->GetPage(i));
+    if (!sc) continue;
+    sc->SetScrollRate(0, 5);
+    // wxStaticBoxSizer takes at least the best width of its static box. In wxQt
+    // that is the QGroupBox sizeHint, which follows the box's current width;
+    // after a wider layout it stayed 421 pt and Data ran off the screen after
+    // visiting GUI. The title is short, so a small best width is enough.
+    for (wxWindow *c : sc->GetChildren()) {
+      if (dynamic_cast<wxStaticBox *>(c))
+        c->CacheBestSize(
+            wxSize(c->GetTextExtent(c->GetLabel()).x + 40, c->GetBestSize().y));
+      // Sliders: drop a fixed width from an earlier, wider layout (Transparency
+      // was stuck at 405 pt and the card ran off the screen). They stretch
+      // instead.
+      if (dynamic_cast<wxSlider *>(c)) {
+        c->SetMinSize(wxSize(80, c->GetMinSize().y));
+        c->SetMaxSize(wxSize(-1, -1));
+        if (QWidget *q = c->GetHandle()) {
+          q->setMinimumWidth(0);
+          q->setMaximumWidth(QWIDGETSIZE_MAX);
+        }
+      }
+    }
+    int need = availH;
+    if (wxSizer *sz = sc->GetSizer())
+      need = wxMin(availH, sz->GetMinSize().y + 10);
+    sc->SetMinSize(wxSize(10, need));
+    if (availW > 100) sc->SetMaxSize(wxSize(availW, -1));
+    if (wxSizer *sz = sc->GetSizer()) sz->FitInside(sc);
+  }
+  Layout();
+  Refresh();
+  return;
+#endif
 #ifdef __OCPN__ANDROID__
   /*Sizing do not work with wxScolledWindow so we need to compute it
   using fixed X/Y margin to try to center nicely the dialog in the screen*/
@@ -1032,6 +1176,15 @@ void GribSettingsDialog::ShowSettings(int params, bool show) {
       // m_sIsoBarSpacing->SetMinSize(wxSize(70, -1));
       break;
     case ISO_LINE_SHORT:
+#ifdef __OCPN__IOS__
+      // iOS: the number next to "Spacing (pixels)" instead of one row lower,
+      // below "Always visible".
+      if (!m_fIsoBarSpacing->IsColGrowable(0))
+        m_fIsoBarSpacing->AddGrowableCol(0);
+      m_fIsoBarSpacing->Add(m_sIsoBarSpacing, 0,
+                            wxALIGN_CENTER_VERTICAL | wxALL, 5);
+      break;
+#endif
       m_fIsoBarVisibility->Add(m_sIsoBarSpacing, 0, 5,
                                wxTOP | wxLEFT | wxEXPAND);
       //  m_sIsoBarSpacing->SetMinSize(wxSize(-1, -1));
