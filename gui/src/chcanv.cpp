@@ -3512,6 +3512,13 @@ void ChartCanvas::StartChartDragInertia() {
 
 void ChartCanvas::OnChartDragInertiaTimer(wxTimerEvent &event) {
   if (!m_chart_drag_inertia_active) return;
+  // The chart database can be rebuilt while this timer runs (the progress
+  // dialog processes events); the quilt then refers to freed charts.
+  if (!ChartData || ChartData->IsBusy() || !ChartData->IsValid()) {
+    m_chart_drag_inertia_timer.Stop();
+    m_chart_drag_inertia_active = false;
+    return;
+  }
   // Calculate time fraction from 0..1
   wxLongLong now = wxGetLocalTimeMillis();
   double elapsed = (now - m_chart_drag_inertia_start_time).ToDouble();
