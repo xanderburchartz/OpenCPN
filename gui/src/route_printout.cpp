@@ -74,6 +74,11 @@
 #define _(s) wxGetTranslation((s)).ToStdString()
 #endif
 
+/** Narrow string (as returned by _() above) for a wide output stream. */
+static std::wstring Wide(const std::string& s) {
+  return wxString(s).ToStdWstring();
+}
+
 using namespace std;
 
 static const std::unordered_map<RoutePrintOptions, std::string> kLabelByOption =
@@ -254,7 +259,7 @@ RoutePrintout::RoutePrintout(Route* route, const RoutePrintDlg& dlg,
         } else {
           point_speed << toUsrSpeed(point->GetPlannedSpeed());
         }
-        point_speed << getUsrSpeedUnit().ToStdString();
+        point_speed << getUsrSpeedUnit().ToStdWstring();
         m_table << point_speed.str();
       } else {
         m_table << "---";
@@ -351,22 +356,25 @@ void RoutePrintout::DrawPage(wxDC* dc, int page) {
 
   distance << std::fixed << std::setprecision(1)
            << toUsrDistance(m_route->m_route_length)
-           << getUsrDistanceUnit().ToStdString();
+           << getUsrDistanceUnit().ToStdWstring();
 
   if (m_route->m_RouteNameString.Trim().Len() > 0) {
-    title << m_route->m_RouteNameString.ToStdString();
+    title << m_route->m_RouteNameString.ToStdWstring();
     title << " (" << distance.str() << ")";
   } else {
-    title << _("Total distance ") << distance.str();
+    title << Wide(_("Total distance ")) << distance.str();
   }
 
   if (m_route->m_RouteStartString.Trim().Len() > 0) {
-    subtitle << _("From") << " " << m_route->m_RouteStartString;
+    subtitle << Wide(_("From")) << " "
+             << m_route->m_RouteStartString.ToStdWstring();
     if (m_route->m_RouteEndString.Trim().Len() > 0) {
-      subtitle << " " << _("To") << " " << m_route->m_RouteEndString;
+      subtitle << " " << Wide(_("To")) << " "
+               << m_route->m_RouteEndString.ToStdWstring();
     }
   } else if (m_route->m_RouteEndString.Trim().Len() > 0) {
-    subtitle << _("Destination") << " " << m_route->m_RouteEndString;
+    subtitle << Wide(_("Destination")) << " "
+             << m_route->m_RouteEndString.ToStdWstring();
   }
 
   int title_width, title_height;
