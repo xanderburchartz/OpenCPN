@@ -116,6 +116,34 @@ wxColour GetColourSchemeFont(wxColour co) {
   return ret_val;
 }
 
+#ifdef __OCPN__IOS__
+// iOS style for the instrument title: instead of a grey bar with italic text, a
+// header like above an iOS list: upright semibold grey text with some padding
+// and a thin line above each instrument.
+const int kIosTitlePad = 3;
+
+static wxFont IosTitleFont(wxFont f) {
+  if (f.GetStyle() == wxFONTSTYLE_ITALIC) f.SetStyle(wxFONTSTYLE_NORMAL);
+  if (f.GetWeight() < wxFONTWEIGHT_SEMIBOLD) f.SetWeight(wxFONTWEIGHT_SEMIBOLD);
+  return f;
+}
+
+// Grey like iOS secondaryLabel, per color scheme as dark as the text in
+// OpenCPN's own bars. A custom (non-black) title color set by the user is kept.
+static wxColour IosTitleColour(const wxColour& chosen) {
+  if (chosen.IsOk() && (chosen.Red() || chosen.Green() || chosen.Blue()))
+    return GetColourSchemeFont(chosen);
+  switch (aktuellColorScheme) {
+    case PI_GLOBAL_COLOR_SCHEME_DUSK:
+      return wxColour(141, 141, 147);
+    case PI_GLOBAL_COLOR_SCHEME_NIGHT:
+      return wxColour(90, 90, 90);
+    default:
+      return wxColour(109, 109, 114);
+  }
+}
+#endif
+
 //----------------------------------------------------------------
 //
 //    Generic DashboardInstrument Implementation
@@ -238,7 +266,13 @@ void DashboardInstrument::InitTitleSize() {
   } else {
     f = g_pFontTitle->GetChosenFont();
   }
+#ifdef __OCPN__IOS__
+  f = IosTitleFont(f);
+#endif
   dc.GetTextExtent(m_title, &m_TitleWidth, &m_TitleHeight, 0, 0, &f);
+#ifdef __OCPN__IOS__
+  m_TitleHeight += kIosTitlePad * 2;
+#endif
 }
 
 void DashboardInstrument::InitTitleAndDataPosition(int drawHeight) {
@@ -328,6 +362,32 @@ void DashboardInstrument::OnPaint(wxPaintEvent& WXUNUSED(event)) {
   dc.Clear();
 
   Draw(&dc);
+
+#ifdef __OCPN__IOS__
+  if (!m_drawSoloInPane) {
+    // Thin separator line above the instrument, then the header. Not above the
+    // top instrument: the pane border is already there.
+    if (GetPosition().y > 0) {
+      GetGlobalColor(_T("DASHL"), &cl);
+      dc.SetPen(wxPen(cl, 1));
+      dc.DrawLine(0, 0, size.x, 0);
+    }
+    wxFont f =
+        IosTitleFont(m_Properties ? m_Properties->m_TitleFont.GetChosenFont()
+                                  : g_pFontTitle->GetChosenFont());
+    dc.SetFont(f);
+    dc.SetTextForeground(
+        IosTitleColour(m_Properties ? m_Properties->m_TitleFont.GetColour()
+                                    : g_pFontTitle->GetColour()));
+    dc.SetBackgroundMode(wxBRUSHSTYLE_TRANSPARENT);
+    const int ty = m_TitleTop + kIosTitlePad;
+    if (m_TitleRightAlign)
+      dc.DrawText(m_title, size.x - m_TitleWidth - g_iTitleMargin - 4, ty);
+    else
+      dc.DrawText(m_title, g_iTitleMargin + 4, ty);
+  }
+  return;
+#endif
 
   if (!m_drawSoloInPane) {
     wxPen pen;
