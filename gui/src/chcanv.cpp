@@ -480,6 +480,7 @@ ChartCanvas::ChartCanvas(wxFrame *frame, int canvasIndex, wxWindow *nmea_log)
   m_canvas_scale_factor = 1.;
 
   m_canvas_width = 1000;
+  m_canvas_height = 1000;
 
   m_overzoomTextWidth = 0;
   m_overzoomTextHeight = 0;
