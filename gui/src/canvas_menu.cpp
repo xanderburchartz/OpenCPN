@@ -87,6 +87,12 @@
 #endif
 
 //    Constants for right click menus
+#ifdef __OCPN__IOS__
+// iOS: "Drop Mark at Boat" was only in the menu bar, which iOS does not have.
+// Own id above the group range (ID_DEF_MENU_GROUPBASE grows dynamically).
+static const int ID_IOS_MENU_DROP_WP_BOAT = 31900;
+#endif
+
 enum {
   ID_DEF_MENU_MAX_DETAIL = 1,
   ID_DEF_MENU_SCALE_IN,
@@ -473,6 +479,11 @@ void CanvasMenuHandler::CanvasPopupMenu(int x, int y, int seltype) {
     if (b_dm_add) {
       MenuAppend1(contextMenu, ID_DEF_MENU_DROP_WP,
                   _menuText(_("Drop Mark"), "Ctrl-M"));
+#ifdef __OCPN__IOS__
+      if (bGPSValid)
+        MenuAppend1(contextMenu, ID_IOS_MENU_DROP_WP_BOAT,
+                    _("Drop Mark at Boat"));
+#endif
       MenuAppend1(contextMenu, ID_DEF_MENU_NEW_RT,
                   _menuText(_("New Route..."), "Ctrl-R"));
     }
@@ -510,7 +521,8 @@ void CanvasMenuHandler::CanvasPopupMenu(int x, int y, int seltype) {
 
   if (!g_bBasicMenus) {
     bool full_toggle_added = false;
-#ifndef __ANDROID__
+    // iOS: iOS always runs full screen; "Toggle Full Screen" did nothing.
+#if !defined(__ANDROID__) && !defined(__OCPN__IOS__)
     if (g_btouch) {
       MenuAppend1(contextMenu, ID_DEF_MENU_TOGGLE_FULL,
                   _("Toggle Full Screen"));
@@ -1208,6 +1220,12 @@ void CanvasMenuHandler::PopupMenuHandler(wxCommandEvent &event) {
 
       break;
     }
+
+#ifdef __OCPN__IOS__
+    case ID_IOS_MENU_DROP_WP_BOAT:
+      top_frame::Get()->DropMarker(true);
+      break;
+#endif
 
     case ID_DEF_MENU_DROP_WP: {
       RoutePoint *pWP = new RoutePoint(zlat, zlon, g_default_wp_icon,

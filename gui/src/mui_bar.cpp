@@ -31,6 +31,10 @@
 #include "ssfn.h"
 
 #include "model/config_vars.h"
+#ifdef __OCPN__IOS__
+int ocpnios_OverlayInsetLeft();  // app/ios/window_fit.cpp: safe area (points)
+int ocpnios_OverlayInsetRight();
+#endif
 #include "model/idents.h"
 #include "model/svg_utils.h"
 
@@ -1065,6 +1069,9 @@ void MUIBar::SetBestPosition() {
       (m_parentCanvas->GetClientSize().x - (m_size.x + (m_end_margin) * 2.00));
 
   int bottomOffset = 6;
+#ifdef __OCPN__IOS__
+  x -= ocpnios_OverlayInsetRight();  // iOS: rounded bottom-right corner
+#endif
 
   int y = m_parentCanvas->GetClientSize().y - m_size.y - bottomOffset;
   // if ( g_bopengl){

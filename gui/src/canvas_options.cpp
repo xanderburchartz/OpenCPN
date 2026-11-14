@@ -204,6 +204,16 @@ CanvasOptions::CanvasOptions(wxWindow* parent)
   pSDepthUnits->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED,
                         wxCommandEventHandler(CanvasOptions::OnOptionChange),
                         NULL, this);
+#ifdef __OCPN__IOS__
+  auto iosBox = [&](wxSizer* box, const wxString& label) {
+    auto* cb = new wxCheckBox(pDisplayPanel, wxID_ANY, label);
+    box->Add(cb, verticalInputFlags);
+    cb->Bind(wxEVT_CHECKBOX, &CanvasOptions::OnOptionChange, this);
+    return cb;
+  };
+  m_iosNavobjects = iosBox(boxDisp, _("Show Navobjects"));
+  m_iosChartBar = iosBox(boxDisp, _("Show Chart Bar"));
+#endif
 
   // AIS Options
   wxStaticBoxSizer* boxAIS = new wxStaticBoxSizer(
@@ -223,6 +233,13 @@ CanvasOptions::CanvasOptions(wxWindow* parent)
   pCBAttenAIS->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED,
                        wxCommandEventHandler(CanvasOptions::OnOptionChange),
                        NULL, this);
+#ifdef __OCPN__IOS__
+  m_iosHideMoored = iosBox(boxAIS, _("Hide Moored AIS Targets"));
+  m_iosAISTracks = iosBox(boxAIS, _("Show AIS Target Tracks"));
+  m_iosCPADialog = iosBox(boxAIS, _("Show CPA Alert Dialogs"));
+  m_iosCPASound = iosBox(boxAIS, _("Sound CPA Alarms"));
+  m_iosCPAWarn = iosBox(boxAIS, _("Show CPA Warnings"));
+#endif
 
   // spacer
   generalSizer->Add(0, interGroupSpace);
@@ -380,6 +397,9 @@ void CanvasOptions::RefreshControlValues() {
   // AIS Options
   pCBShowAIS->SetValue(parentCanvas->GetShowAIS());
   pCBAttenAIS->SetValue(parentCanvas->GetAttenAIS());
+#ifdef __OCPN__IOS__
+  IosRefreshControlValues(parentCanvas);  // app/ios/canvas_ios.cpp
+#endif
 
   // Tide/Current
   pCDOTides->SetValue(parentCanvas->GetbShowTide());
@@ -491,6 +511,10 @@ void CanvasOptions::UpdateCanvasOptions() {
     b_needRefresh = true;
   }
 
+#ifdef __OCPN__IOS__
+  IosUpdateCanvasOptions(parentCanvas,
+                         b_needRefresh);  // app/ios/canvas_ios.cpp
+#endif
   if (pCBAttenAIS->GetValue() != parentCanvas->GetAttenAIS()) {
     parentCanvas->SetAttenAIS(pCBAttenAIS->GetValue());
     b_needRefresh = true;
