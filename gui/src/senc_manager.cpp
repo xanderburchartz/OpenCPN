@@ -311,6 +311,9 @@ void *SENCBuildThread::Entry() {
   // #ifdef __MSVC__
   catch (const std::exception &e /*SE_Exception e*/) {
     const char *msg = e.what();
+#ifdef __OCPN__IOS__
+    wxLogMessage("SENCBuildThread exception: %s", msg);
+#endif
     if (m_manager) {
       //             OCPN_CompressionThreadEvent
       //             Nevent(wxEVT_OCPN_COMPRESSIONTHREAD, 0);
