@@ -27,8 +27,10 @@
 
 #include "chartdldr_pi.h"
 
+#include <algorithm>
 #include <fstream>
 #include <memory>
+#include <vector>
 
 #ifdef DLDR_USE_LIBARCHIVE
 #include <archive.h>
@@ -1653,6 +1655,11 @@ void ChartDldrPanelImpl::AddSource(wxCommandEvent &event) {
     SelectCatalog(m_lbChartSources->GetItemCount() - 1);
     m_plugin->m_ChartSources.push_back(std::move(cs));
     m_plugin->SaveConfig();
+    // Fetch the catalog right away instead of showing "(Please update first)"
+    // and making the user find Update. On success UpdateChartList opens the
+    // chart list.
+    wxCommandEvent update;
+    UpdateChartList(update);
   }
 #ifdef __ANDROID__
   androidEnableRotation();
@@ -2357,7 +2364,9 @@ bool ChartDldrGuiAddSourceDlg::LoadSection(const wxTreeItemId &root,
        element = element.next_sibling()) {
     if (!strcmp(element.name(), "name")) {
       item = m_treeCtrlPredefSrcs->AppendItem(
-          root, wxString::FromUTF8(element.first_child().value()), 0, 0);
+          root,
+          wxGetTranslation(wxString::FromUTF8(element.first_child().value())),
+          0, 0);
 
       wxFont *pFont = OCPNGetFont(_("Dialog"));
       if (pFont) m_treeCtrlPredefSrcs->SetItemFont(item, *pFont);
@@ -2369,12 +2378,28 @@ bool ChartDldrGuiAddSourceDlg::LoadSection(const wxTreeItemId &root,
   return true;
 }
 
+// Sources covering a whole region ("EURIS - All ...", "All ...") first, then
+// alphabetically by the shown (translated) name.
+static bool CompareSources(const std::pair<wxString, pugi::xml_node> &a,
+                           const std::pair<wxString, pugi::xml_node> &b) {
+  bool a_all = a.first.StartsWith("EURIS") || a.first.StartsWith("All ");
+  bool b_all = b.first.StartsWith("EURIS") || b.first.StartsWith("All ");
+  if (a_all != b_all) return a_all;
+  return wxGetTranslation(a.first).CmpNoCase(wxGetTranslation(b.first)) < 0;
+}
+
 bool ChartDldrGuiAddSourceDlg::LoadCatalogs(const wxTreeItemId &root,
                                             pugi::xml_node &node) {
+  std::vector<std::pair<wxString, pugi::xml_node>> items;
   for (pugi::xml_node element = node.first_child(); element;
        element = element.next_sibling()) {
-    if (!strcmp(element.name(), "catalog")) LoadCatalog(root, element);
+    if (strcmp(element.name(), "catalog")) continue;
+    wxString n =
+        wxString::FromUTF8(element.child("name").first_child().value());
+    items.emplace_back(n, element);
   }
+  std::stable_sort(items.begin(), items.end(), CompareSources);
+  for (auto &it : items) LoadCatalog(root, it.second);
 
   return true;
 }
@@ -2391,8 +2416,10 @@ bool ChartDldrGuiAddSourceDlg::LoadCatalog(const wxTreeItemId &root,
     else if (!strcmp(element.name(), "dir"))
       dir = wxString::FromUTF8(element.first_child().value());
   }
-  auto *cs = new ChartSource(name, location, dir);
-  wxTreeItemId id = m_treeCtrlPredefSrcs->AppendItem(root, name, 1, 1, cs);
+  // The name is shown and stored translated (the XML holds the English name).
+  auto *cs = new ChartSource(wxGetTranslation(name), location, dir);
+  wxTreeItemId id =
+      m_treeCtrlPredefSrcs->AppendItem(root, wxGetTranslation(name), 1, 1, cs);
 
   wxFont *pFont = OCPNGetFont(_("Dialog"));
   if (pFont) m_treeCtrlPredefSrcs->SetItemFont(id, *pFont);
