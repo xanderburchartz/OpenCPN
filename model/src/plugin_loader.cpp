@@ -838,9 +838,11 @@ bool PluginLoader::UpdatePlugIns() {
       wxString msg("PluginLoader: Initializing PlugIn: ");
       msg += pic->m_plugin_file;
       wxLogMessage(msg);
+      pic->m_cap_flag = pic->m_pplugin->Init();
+      // Only Init() tells if the plugin has an options page; a plugin enabled
+      // for the first time still had m_cap_flag 0 here.
       if (pic->m_cap_flag & INSTALLS_TOOLBOX_PAGE)
         pic->m_has_setup_options = false;
-      pic->m_cap_flag = pic->m_pplugin->Init();
       pic->m_pplugin->SetDefaults();
       pic->m_init_state = true;
       ProcessLateInit(pic);
