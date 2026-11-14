@@ -225,6 +225,9 @@ public:
   void SetColorScheme(PI_ColorScheme cs) override;
   void OnPaneClose(wxAuiManagerEvent &event);
   void UpdateAuiStatus() override;
+#ifdef __OCPN__IOS__
+  void IosFitPane(DashboardWindowContainer *cont, wxAuiPaneInfo &pane);
+#endif
   bool SaveConfig();
   void PopulateContextMenu(wxMenu *menu);
   void ShowDashboard(size_t id, bool visible);
@@ -450,6 +453,11 @@ public:
 
   void SetColorScheme(PI_ColorScheme cs);
   void SetSizerOrientation(int orient);
+#ifdef __OCPN__IOS__
+  // iOS: recompute the minimum size from the default width, independent of the
+  // current (possibly saved) frame width.
+  wxSize IosNaturalMinSize();
+#endif
   int GetSizerOrientation();
   void OnSize(wxSizeEvent &evt);
   void OnContextMenu(wxContextMenuEvent &evt);

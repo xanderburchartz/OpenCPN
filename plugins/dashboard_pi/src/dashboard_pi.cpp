@@ -3458,7 +3458,43 @@ void dashboard_pi::OnToolbarToolCallback(int id) {
   SetToolbarItemState(m_toolbar_item_id,
                       GetDashboardWindowShownCount() != 0 /*cnt==0*/);
   m_pauimgr->Update();
+#ifdef __OCPN__IOS__
+  // After Show, AUI (wxQt) recreates the floating frame later with the old
+  // size, so set the size afterwards; setting it immediately was overwritten.
+  auto refit = [this]() {
+    for (size_t i = 0; i < m_ArrayOfDashboardWindow.GetCount(); i++) {
+      DashboardWindowContainer *cont = m_ArrayOfDashboardWindow.Item(i);
+      if (!cont->m_pDashboardWindow) continue;
+      wxAuiPaneInfo &pane = m_pauimgr->GetPane(cont->m_pDashboardWindow);
+      if (pane.IsOk() && pane.IsShown()) IosFitPane(cont, pane);
+    }
+    m_pauimgr->Update();
+  };
+  refit();
+  if (wxTheApp) wxTheApp->CallAfter(refit);
+#endif
 }
+
+#ifdef __OCPN__IOS__
+// Size the pane to what the dashboard computes for its instruments. With a
+// saved width of 240 the compass grew and GNSS Status was cut off. Also needed
+// when enabled from the toolbar, because AUI then recreates the floating frame
+// with the old size.
+void dashboard_pi::IosFitPane(DashboardWindowContainer *cont,
+                              wxAuiPaneInfo &pane) {
+  wxSize sz = cont->m_pDashboardWindow->IosNaturalMinSize();
+  if (sz.x <= 0 || sz.y <= 0) return;
+  // Also reset the saved minimum size (minw=240), which kept the frame 240
+  // wide.
+  pane.FloatingSize(sz).MinSize(sz).BestSize(sz);
+  // AUI does not resize an existing floating frame, so resize the frame as
+  // well.
+  if (pane.frame) {
+    pane.frame->SetMinSize(wxDefaultSize);
+    pane.frame->SetClientSize(sz);
+  }
+}
+#endif
 
 void dashboard_pi::UpdateAuiStatus() {
   //    This method is called after the PlugIn is initialized
@@ -3479,6 +3515,13 @@ void dashboard_pi::UpdateAuiStatus() {
       if ((cont->m_persist_size.x > 50) && (cont->m_persist_size.y > 50))
         cont->m_pDashboardWindow->SetSize(cont->m_persist_size);
     }
+
+#ifdef __OCPN__IOS__
+    // On iOS the pane always floats. The saved size may come from a docked pane
+    // (e.g. 240x376); at 240 wide the compass grows and GNSS Status is cut off.
+    // Use the size the dashboard computes for its instruments instead.
+    if (pane.IsOk()) IosFitPane(cont, pane);
+#endif
 
 #ifdef __WXQT__
     if (pane.IsShown()) {
@@ -4049,7 +4092,8 @@ void dashboard_pi::ApplyConfig() {
       // ).RightDockable( vertical ).MinSize( sz ).BestSize( sz ).FloatingSize(
       // sz ).FloatingPosition( 100, 100 ).Float().Show( cont->m_bIsVisible ) );
 
-#ifdef __ANDROID__
+#if defined(__ANDROID__) || defined(__OCPN__IOS__)
+      // iOS: like Android, the pane cannot be docked next to the chart.
       wxAuiPaneInfo &pane = m_pauimgr->GetPane(cont->m_pDashboardWindow);
       pane.Dockable(false);
 
@@ -4296,24 +4340,45 @@ DashboardPreferencesDialog::DashboardPreferencesDialog(
   auto *itemStaticText01 =
       new wxStaticText(m_pPanelDashboard, wxID_ANY, _("Caption:"),
                        wxDefaultPosition, wxDefaultSize, 0);
+#ifdef __OCPN__IOS__
+  // iOS: label vertically centered next to the field, field fills the row;
+  // right-aligned at default width the name was truncated.
+  itemFlexGridSizer->Add(itemStaticText01, 0, wxALIGN_CENTER_VERTICAL | wxALL,
+                         border_size);
+#else
   itemFlexGridSizer->Add(itemStaticText01, 0, wxEXPAND | wxALL, border_size);
+#endif
   m_pTextCtrlCaption = new wxTextCtrl(m_pPanelDashboard, wxID_ANY, "",
                                       wxDefaultPosition, wxDefaultSize);
   m_pCheckBoxIsVisible->SetMinSize(wxSize(30 * wxWindow::GetCharWidth(), -1));
+#ifdef __OCPN__IOS__
+  itemFlexGridSizer->Add(m_pTextCtrlCaption, 0, wxEXPAND | wxALL, border_size);
+#else
   itemFlexGridSizer->Add(m_pTextCtrlCaption, 0, wxALIGN_RIGHT | wxALL,
                          border_size);
+#endif
 
   auto *itemStaticText02 =
       new wxStaticText(m_pPanelDashboard, wxID_ANY, _("Orientation:"),
                        wxDefaultPosition, wxDefaultSize, 0);
+#ifdef __OCPN__IOS__
+  itemFlexGridSizer->Add(itemStaticText02, 0, wxALIGN_CENTER_VERTICAL | wxALL,
+                         border_size);
+#else
   itemFlexGridSizer->Add(itemStaticText02, 0, wxEXPAND | wxALL, border_size);
+#endif
   m_pChoiceOrientation = new wxChoice(m_pPanelDashboard, wxID_ANY,
                                       wxDefaultPosition, wxDefaultSize);
   m_pChoiceOrientation->SetMinSize(wxSize(15 * wxWindow::GetCharWidth(), -1));
   m_pChoiceOrientation->Append(_("Vertical"));
   m_pChoiceOrientation->Append(_("Horizontal"));
+#ifdef __OCPN__IOS__
+  itemFlexGridSizer->Add(m_pChoiceOrientation, 0, wxALIGN_LEFT | wxALL,
+                         border_size);
+#else
   itemFlexGridSizer->Add(m_pChoiceOrientation, 0, wxALIGN_RIGHT | wxALL,
                          border_size);
+#endif
 
   int instImageRefSize = 20 * GetOCPNGUIToolScaleFactor_PlugIn();
 
@@ -4791,6 +4856,20 @@ DashboardPreferencesDialog::DashboardPreferencesDialog(
 
   UpdateDashboardButtonsState();
   UpdateButtonsState();
+#ifdef __OCPN__IOS__
+  // iOS: wxQt loses a selection made before Show; all fields stayed empty and
+  // greyed out until the pane icon was tapped.
+  CallAfter([this]() {
+    if (m_pListCtrlDashboards->GetItemCount() > 0 &&
+        m_pListCtrlDashboards->GetNextItem(-1, wxLIST_NEXT_ALL,
+                                           wxLIST_STATE_SELECTED) == -1) {
+      m_pListCtrlDashboards->SetItemState(0, wxLIST_STATE_SELECTED,
+                                          wxLIST_STATE_SELECTED);
+      UpdateDashboardButtonsState();
+      UpdateButtonsState();
+    }
+  });
+#endif
 
   // SetMinSize(wxSize(400, -1));
 
@@ -5833,6 +5912,26 @@ void DashboardWindow::ChangePaneOrientation(int orient, bool updateAUImgr,
 
   if (updateAUImgr) m_pauimgr->Update();
 }
+
+#ifdef __OCPN__IOS__
+wxSize DashboardWindow::IosNaturalMinSize() {
+  // GetMinSize() depends on the current width: OnSize sets each instrument's
+  // minimum size to the client width, and the compass is as tall as it is wide.
+  // With a saved width of 240 the pane stayed 240 wide and GNSS Status was cut
+  // off. So recompute from the default width, as SetInstrumentList does.
+  wxSize hint(DefaultWidth, DefaultWidth);
+  for (unsigned int i = 0; i < m_ArrayOfInstrument.size(); i++) {
+    DashboardInstrument *inst = m_ArrayOfInstrument.Item(i)->m_pInstrument;
+    inst->SetMinSize(inst->GetSize(itemBoxSizer->GetOrientation(), hint));
+    hint = inst->GetMinSize();
+  }
+  SetMinSize(wxDefaultSize);
+  Fit();
+  Layout();
+  SetMinSize(itemBoxSizer->GetMinSize());
+  return GetMinSize();
+}
+#endif
 
 void DashboardWindow::SetSizerOrientation(int orient) {
   itemBoxSizer->SetOrientation(orient);
