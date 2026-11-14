@@ -65,6 +65,21 @@ typedef double          GLdouble;       /* double precision float */
 #endif
 #endif
 
+// iOS: OpenGL ES on iOS lacks GLdouble too
+#ifdef __OCPN__IOS__
+typedef double          GLdouble;       /* double precision float */
+#define GL_DOUBLE                               0x140A
+#ifndef GL_COMPRESSED_RGB_S3TC_DXT1_EXT
+#define GL_COMPRESSED_RGB_S3TC_DXT1_EXT   0x83F0  /* value from glext.h */
+#endif
+#ifndef GL_COMPRESSED_RGBA_S3TC_DXT1_EXT
+#define GL_COMPRESSED_RGBA_S3TC_DXT1_EXT  0x83F1  /* value from glext.h */
+#endif
+#ifndef GL_DEPTH24_STENCIL8_OES
+#define GL_DEPTH24_STENCIL8_OES           0x88F0  /* OES_packed_depth_stencil */
+#endif
+#endif
+
 GLAPI void GLAPIENTRY glPushAttrib( GLbitfield mask );
 GLAPI void GLAPIENTRY glPopAttrib( void );
 GLAPI void GLAPIENTRY glEnd( void );

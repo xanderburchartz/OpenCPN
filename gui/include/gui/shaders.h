@@ -34,6 +34,13 @@
 #ifdef __ANDROID__
 #include <QDebug>
 #include "qlogging.h"
+#elif defined(__OCPN__IOS__)
+// iOS: qDebug below (USE_ANDROID_GLES2). N2kDef.h (libs/N2KParser)
+// defines F(str), which breaks qscopeguard.h from Qt 6.
+#pragma push_macro("F")
+#undef F
+#include <QDebug>
+#pragma pop_macro("F")
 #endif
 
 class GLShaderProgram;  // forward
