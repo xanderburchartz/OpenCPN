@@ -330,6 +330,21 @@ RouteManagerDialog::RouteManagerDialog(wxWindow *parent) {
                               [&](wxCommandEvent) { UpdateRouteListCtrl(); });
 }
 
+// iOS: on a phone the list on top and the buttons below in two columns,
+// instead of side by side with a narrow, scrolling button column.
+#ifdef __OCPN__IOS__
+#define OCPNIOS_RMD_DIR wxVERTICAL
+// Two-column button grid and button fitting: app/ios/plugins_ios.cpp.
+wxSizer *ocpnios_RmdButtonSizer();
+void ocpnios_RmdFitButtons(wxWindow *dlg, int margin, wxScrolledWindow *winr,
+                           wxScrolledWindow *wint, wxScrolledWindow *winw,
+                           wxScrolledWindow *winl);
+#define OCPNIOS_RMD_BUTTONSIZER() ocpnios_RmdButtonSizer()
+#else
+#define OCPNIOS_RMD_DIR wxHORIZONTAL
+#define OCPNIOS_RMD_BUTTONSIZER() new wxBoxSizer(wxVERTICAL)
+#endif
+
 void RouteManagerDialog::Create() {
   //  Get a text height metric for reference
   int char_width, char_height;
@@ -347,7 +362,7 @@ void RouteManagerDialog::Create() {
   m_pPanelRte = new wxPanel(m_pNotebook, wxID_ANY, wxDefaultPosition,
                             wxDefaultSize, wxNO_BORDER | wxTAB_TRAVERSAL);
 
-  wxBoxSizer *sbsRoutes = new wxBoxSizer(wxHORIZONTAL);
+  wxBoxSizer *sbsRoutes = new wxBoxSizer(OCPNIOS_RMD_DIR);
   m_pPanelRte->SetSizer(sbsRoutes);
   m_pNotebook->AddPage(m_pPanelRte, _("Routes"));
 
@@ -441,7 +456,7 @@ void RouteManagerDialog::Create() {
 
   bsRouteButtons->Add(winr, 1, wxALL | wxEXPAND, DIALOG_MARGIN);
 
-  wxBoxSizer *bsRouteButtonsInner = new wxBoxSizer(wxVERTICAL);
+  wxSizer *bsRouteButtonsInner = OCPNIOS_RMD_BUTTONSIZER();
   winr->SetSizer(bsRouteButtonsInner);
 
   btnRteProperties = new wxButton(winr, -1, _("&Properties") + "...");
@@ -536,7 +551,7 @@ void RouteManagerDialog::Create() {
   //  Create "Tracks" panel
   m_pPanelTrk = new wxPanel(m_pNotebook, wxID_ANY, wxDefaultPosition,
                             wxDefaultSize, wxNO_BORDER | wxTAB_TRAVERSAL);
-  wxBoxSizer *sbsTracks = new wxBoxSizer(wxHORIZONTAL);
+  wxBoxSizer *sbsTracks = new wxBoxSizer(OCPNIOS_RMD_DIR);
   m_pPanelTrk->SetSizer(sbsTracks);
   m_pNotebook->AddPage(m_pPanelTrk, _("Tracks"));
 
@@ -624,7 +639,7 @@ void RouteManagerDialog::Create() {
 
   bsTrkButtons->Add(wint, 1, wxALL | wxEXPAND, DIALOG_MARGIN);
 
-  wxBoxSizer *bsTrkButtonsInner = new wxBoxSizer(wxVERTICAL);
+  wxSizer *bsTrkButtonsInner = OCPNIOS_RMD_BUTTONSIZER();
   wint->SetSizer(bsTrkButtonsInner);
 
   btnTrkNew = new wxButton(wint, -1, _("&Start Track"));
@@ -679,7 +694,7 @@ void RouteManagerDialog::Create() {
   //  Create "Marks" panel
   m_pPanelWpt = new wxPanel(m_pNotebook, wxID_ANY, wxDefaultPosition,
                             wxDefaultSize, wxNO_BORDER | wxTAB_TRAVERSAL);
-  wxBoxSizer *sbsWpts = new wxBoxSizer(wxHORIZONTAL);
+  wxBoxSizer *sbsWpts = new wxBoxSizer(OCPNIOS_RMD_DIR);
   m_pPanelWpt->SetSizer(sbsWpts);
   m_pNotebook->AddPage(m_pPanelWpt, _("Marks"));
 
@@ -740,8 +755,15 @@ void RouteManagerDialog::Create() {
   bSizerWptContents->Add(m_pWptListCtrl, 1, wxEXPAND | wxALL, DIALOG_MARGIN);
   sbsWpts->Add(bSizerWptContents, 1, wxEXPAND, 5);
 
+#ifdef __OCPN__IOS__
+  // iOS: column wide enough for the header ("Icon" was truncated).
+  m_pWptListCtrl->InsertColumn(
+      colWPTICON, _("Icon"), wxLIST_FORMAT_LEFT,
+      wxMax(4 * char_width, GetTextExtent(_("Icon")).x * 13 / 10 + char_width));
+#else
   m_pWptListCtrl->InsertColumn(colWPTICON, _("Icon"), wxLIST_FORMAT_LEFT,
                                4 * char_width);
+#endif
   m_pWptListCtrl->InsertColumn(colWPTSCALE, _("Scale"), wxLIST_FORMAT_LEFT,
                                8 * char_width);
   m_pWptListCtrl->InsertColumn(colWPTNAME, _("Mark Name"), wxLIST_FORMAT_LEFT,
@@ -759,7 +781,7 @@ void RouteManagerDialog::Create() {
 
   bsWptButtons->Add(winw, 1, wxALL | wxEXPAND, DIALOG_MARGIN);
 
-  wxBoxSizer *bsWptButtonsInner = new wxBoxSizer(wxVERTICAL);
+  wxSizer *bsWptButtonsInner = OCPNIOS_RMD_BUTTONSIZER();
   winw->SetSizer(bsWptButtonsInner);
 
   btnWptNew = new wxButton(winw, -1, _("&New"));
@@ -875,7 +897,7 @@ void RouteManagerDialog::Create() {
   //  Create "Layers" panel
   m_pPanelLay = new wxPanel(m_pNotebook, wxID_ANY, wxDefaultPosition,
                             wxDefaultSize, wxNO_BORDER | wxTAB_TRAVERSAL);
-  wxBoxSizer *sbsLayers = new wxBoxSizer(wxHORIZONTAL);
+  wxBoxSizer *sbsLayers = new wxBoxSizer(OCPNIOS_RMD_DIR);
   m_pPanelLay->SetSizer(sbsLayers);
   m_pNotebook->AddPage(m_pPanelLay, _("Layers"));
 
@@ -955,7 +977,7 @@ void RouteManagerDialog::Create() {
 
   bsLayButtons->Add(winl, 1, wxALL | wxEXPAND, DIALOG_MARGIN);
 
-  wxBoxSizer *bsLayButtonsInner = new wxBoxSizer(wxVERTICAL);
+  wxSizer *bsLayButtonsInner = OCPNIOS_RMD_BUTTONSIZER();
   winl->SetSizer(bsLayButtonsInner);
 
   btnLayNew = new wxButton(winl, -1, _("Create Temporary layer"));
@@ -1001,6 +1023,10 @@ void RouteManagerDialog::Create() {
       wxCommandEventHandler(RouteManagerDialog::OnLayToggleListingClick), NULL,
       this);
 
+#ifdef __OCPN__IOS__
+  // iOS: button areas as tall as their buttons, labels fitted to a column.
+  ocpnios_RmdFitButtons(this, DIALOG_MARGIN, winr, wint, winw, winl);
+#endif
   RecalculateSize();
 
   int imageRefSize = m_charWidth * 2;  // g_Platform->GetDisplayDPmm() * 4;
@@ -1116,6 +1142,10 @@ void RouteManagerDialog::RecalculateSize() {
   sz.y = 30 * char_height;
 
   wxSize dsize = GetParent()->GetClientSize();
+#ifdef __OCPN__IOS__
+  // iOS: full screen (window_fit.cpp keeps it below the status bar).
+  sz = dsize;
+#endif
   sz.y = wxMin(sz.y, dsize.y);
   sz.x = wxMin(sz.x, dsize.x);
   SetClientSize(sz);

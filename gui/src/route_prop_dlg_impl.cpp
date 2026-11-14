@@ -312,6 +312,13 @@ void RoutePropDlgImpl::OnActivate(wxActivateEvent& event) {
 }
 
 void RoutePropDlgImpl::RecalculateSize() {
+#ifdef __OCPN__IOS__
+  // iOS: full screen (window_fit.cpp keeps it below the status bar);
+  // otherwise it opened half over the Route & Mark Manager.
+  SetSize(GetParent()->GetClientSize());
+  Move(0, 0);
+  return;
+#endif
   wxSize esize;
   esize.x = GetCharWidth() * 110;
   esize.y = GetCharHeight() * 40;
@@ -474,6 +481,28 @@ void RoutePropDlgImpl::UpdatePoints() {
     wxDataViewItem selection = m_dvlcWaypoints->GetSelection();
     if (selection.IsOk()) m_dvlcWaypoints->EnsureVisible(selection);
   }
+#ifdef __OCPN__IOS__
+  // iOS: size columns to their content. "Autosize" at creation ran on an empty
+  // table; afterwards distances were truncated as "7.9 ...". Setting AUTOSIZE
+  // again did not help: the generic wxDataViewCtrl measures with a smaller font
+  // than it draws with. So measure ourselves, with a margin.
+  {
+    const unsigned int ncol = m_dvlcWaypoints->GetColumnCount();
+    const unsigned int nrow = m_dvlcWaypoints->GetItemCount();
+    for (unsigned int c = 0; c < ncol; c++) {
+      wxDataViewColumn* col = m_dvlcWaypoints->GetColumn(c);
+      int w = m_dvlcWaypoints->GetTextExtent(col->GetTitle()).x;
+      for (unsigned int r = 0; r < nrow; r++)
+        w = wxMax(w, m_dvlcWaypoints
+                         ->GetTextExtent(m_dvlcWaypoints->GetTextValue(r, c))
+                         .x);
+      col->SetWidth(w * 13 / 10 + 2 * GetCharWidth());
+      // The table also truncated wide columns ("7.9 ...") due to the same
+      // measuring error; turn ellipsizing off.
+      if (col->GetRenderer()) col->GetRenderer()->DisableEllipsize();
+    }
+  }
+#endif
 }
 
 void RoutePropDlgImpl::SetRouteAndUpdate(Route* pR, bool only_points) {

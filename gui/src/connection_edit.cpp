@@ -418,6 +418,10 @@ ConnectionEditDialog::ConnectionEditDialog(
 ConnectionEditDialog::~ConnectionEditDialog() = default;
 
 void ConnectionEditDialog::AddOKCancelButtons() {
+#ifdef __OCPN__IOS__
+  IosAddNavButtons();  // app/ios/connections_ios.cpp
+  return;
+#endif
 #ifndef ANDROID
   if (!m_std_dialog_btn_sizer) {
     m_std_dialog_btn_sizer = new wxStdDialogButtonSizer();
@@ -633,7 +637,11 @@ void ConnectionEditDialog::Init() {
       new wxRadioButton(this, wxID_ANY, _("Serial"), wxDefaultPosition,
                         wxDefaultSize, wxRB_GROUP);
   m_type_serial_radiobtn->SetValue(true);
+#ifdef __OCPN__IOS__
+  m_type_serial_radiobtn->Hide();  // iOS: no serial port on iPhone/iPad
+#else
   bSizer15->Add(m_type_serial_radiobtn, 0, wxALL, 5);
+#endif
 
   m_type_net_radiobtn = new wxRadioButton(this, wxID_ANY, _("Network"),
                                           wxDefaultPosition, wxDefaultSize, 0);
@@ -1191,6 +1199,14 @@ void ConnectionEditDialog::SetSelectedConnectionPanel(
 }
 
 void ConnectionEditDialog::SetPropsLabel(const wxString& label) {
+#ifdef __OCPN__IOS__
+  // iOS: the title is in the title bar (AddOKCancelButtons), the box has no
+  // caption.
+  m_iosPropsLabel = label;
+  if (m_iosNavTitle) m_iosNavTitle->SetLabel(label);
+  m_conn_edit_statbox->SetLabel(wxEmptyString);
+  return;
+#endif
   m_conn_edit_statbox->SetLabel(label);
 }
 
@@ -1324,7 +1340,11 @@ void ConnectionEditDialog::OnUploadFormatChange(wxCommandEvent& event) {
 }
 
 void ConnectionEditDialog::ShowTypeCommon(bool visible) {
+#ifdef __OCPN__IOS__
+  m_type_serial_radiobtn->Show(false);  // iOS: no serial port
+#else
   m_type_serial_radiobtn->Show(visible);
+#endif
   m_type_net_radiobtn->Show(visible);
 #if defined(__linux__) && !defined(__ANDROID__) && !defined(__WXOSX__)
   m_type_can_radiobtn->Show(visible);
@@ -1860,6 +1880,11 @@ void ConnectionEditDialog::SetDefaultConnectionParams() {
 
 #ifdef __WXOSX__
   bserial = false;
+#endif
+#ifdef __OCPN__IOS__
+  // iOS: an iPhone/iPad has no serial port; new connections start as network
+  // connections.
+  bserial = FALSE;
 #endif
 
 #ifdef __ANDROID__

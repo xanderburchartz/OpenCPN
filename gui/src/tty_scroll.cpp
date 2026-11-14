@@ -120,8 +120,18 @@ wxColor UserColorsByState::operator()(NavmsgStatus ns) {
   return color.IsOk() ? color : defaults(ns);
 }
 
+#ifdef __OCPN__IOS__
+// app/ios/connections_ios.cpp
+void ocpnios_DrawTtyMessage(wxWindow* win, wxDC& dc, const wxString& ws,
+                            int& data_pos, int y, int line_height);
+#endif
+
 /** Draw a single line in the log window. */
 void TtyScroll::DrawLine(wxDC& dc, const Logline& ll, int data_pos, int y) {
+#ifdef __OCPN__IOS__
+  // iOS: do not draw empty placeholder lines (they showed a column of "⇤ ✓").
+  if (!ll.navmsg && ll.message.empty()) return;
+#endif
   wxString ws;
   if (!ll.message.empty()) ws << Timestamp(ll.navmsg->created_at) << " ";
   if (ll.message.empty())
@@ -159,7 +169,13 @@ void TtyScroll::DrawLine(wxDC& dc, const Logline& ll, int data_pos, int y) {
   dc.DrawText(ws, 0, y);
   ws = "";
   ws << ll.message << error_msg.str();
+#ifdef __OCPN__IOS__
+  // iOS: message on its own line(s) below the source;
+  // app/ios/connections_ios.cpp
+  ocpnios_DrawTtyMessage(this, dc, ws, data_pos, y, m_line_height);
+#else
   dc.DrawText(ws, data_pos, y);
+#endif
   m_text_width =
       std::max(m_text_width, GetTextExtent(ws).GetWidth() + data_pos);
 }
@@ -169,6 +185,10 @@ TtyScroll::TtyScroll(wxWindow* parent, int n_lines)
   SetName("TtyScroll");
   wxClientDC dc(this);
   dc.GetTextExtent("Line Height", NULL, &m_line_height);
+#ifdef __OCPN__IOS__
+  m_line_height *=
+      3;  // source, and the message over two lines below (DrawLine)
+#endif
   SetScrollRate(m_line_height, m_line_height);
   for (unsigned i = 0; i < m_n_lines; i++) m_lines.push_back(Logline());
   SetColors(std::make_unique<UserColorsByState>());
@@ -176,7 +196,13 @@ TtyScroll::TtyScroll(wxWindow* parent, int n_lines)
 }
 
 void TtyScroll::OnSize(wxSizeEvent& ev) {
+#ifdef __OCPN__IOS__
+  // Number of log entries that fit; an entry is three text lines high here.
+  m_n_lines = std::max(1, ev.GetSize().y / std::max(1, m_line_height));
+  while (m_lines.size() > m_n_lines) m_lines.pop_front();  // drop the oldest
+#else
   m_n_lines = ev.GetSize().y / GetCharHeight();
+#endif
   while (m_lines.size() < m_n_lines) m_lines.push_back(Logline());
   ev.Skip();
 }

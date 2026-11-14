@@ -23,6 +23,9 @@
 
 #include "gui_lib.h"
 #include "print_dialog.h"
+#ifdef __OCPN__IOS__
+#include "share_sheet.h"  // iOS: app/ios/share_sheet.mm
+#endif
 
 PrintDialog::PrintDialog() {
   wxPrintData data;
@@ -62,5 +65,10 @@ void PrintDialog::Print(wxWindow* parent, wxPrintout* output) {
   } else {
     wxPrintData data = printer.GetPrintDialogData().GetPrintData();
     m_print_data.SetPrintData(data);
+#ifdef __OCPN__IOS__
+    // iOS: printing writes a PDF to Documents (wxQt patch); then show the
+    // iOS share sheet (AirPrint, Mail, Files).
+    OcpnIosShareFile(data.GetFilename().utf8_str());
+#endif
   }
 }
