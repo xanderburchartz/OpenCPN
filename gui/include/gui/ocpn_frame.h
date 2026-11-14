@@ -523,6 +523,12 @@ private:
   void CalculateCOGAverage();
 
   void ODoSetSize(void);
+#ifdef __OCPN__IOS__
+  // iOS: app/ios/frame_ios.cpp
+  bool m_iosInSetSize = false;  // ODoSetSize is running
+  void IosOnSize();
+  void IosRescaleCanvases();
+#endif
   void DoCOGSet(void);
 
   void UpdateAllToolbars(ColorScheme cs);
