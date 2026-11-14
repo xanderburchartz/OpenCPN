@@ -19,7 +19,7 @@ msgstr ""
 
 #: src/GribUIDialog.cpp:427
 msgid "Start a download request"
-msgstr ""
+msgstr "Download aanvragen"
 
 #: src/GribUIDialog.cpp:466
 msgid "File: "
@@ -79,7 +79,7 @@ msgstr "Instellingen"
 
 #: src/GribUIDialog.cpp:1019
 msgid "Request forecast data"
-msgstr ""
+msgstr "Verwachting aanvragen"
 
 #: src/GribUIDialog.cpp:1021
 msgid "Draw requested Area or Click here to stop request"
@@ -309,7 +309,7 @@ msgstr "Deze optie impliceert dat u interpolatie gebruikt\n"
 
 #: src/grib_ui_dlg.h:289 src/GribUIDialogBase.cpp:2374
 msgid "Choose GRIB File Directory"
-msgstr ""
+msgstr "Kies de map voor GRIB-bestanden"
 
 #: src/GribUIDialogBase.cpp:49 src/GribUIDialogBase.cpp:174
 msgid "Previous"
@@ -405,16 +405,16 @@ msgstr "Windpijlen"
 
 #: src/GribUIDialogBase.cpp:1215
 msgid "Default Color"
-msgstr ""
+msgstr "Standaardkleur"
 
 #: src/GribUIDialogBase.cpp:1216
 msgid "Controlled Colors"
-msgstr ""
+msgstr "Kleur naar waarde"
 
 #: src/GribUIDialogBase.cpp:1232 src/GribUIDialogBase.cpp:1336
 #: src/GribUIDialogBase.cpp:1409
 msgid "Spacing (pixels)"
-msgstr ""
+msgstr "Afstand (pixels)"
 
 #: src/GribUIDialogBase.cpp:1238 src/GribUIDialogBase.cpp:1341
 #: src/GribUIDialogBase.cpp:1414
@@ -478,11 +478,11 @@ msgstr "Generiek"
 
 #: src/GribUIDialogBase.cpp:1390
 msgid "REFC"
-msgstr ""
+msgstr "REFC"
 
 #: src/GribUIDialogBase.cpp:1390
 msgid "Windy"
-msgstr ""
+msgstr "Windy"
 
 #: src/GribUIDialogBase.cpp:1399 src/CursorData.cpp:652 src/CursorData.cpp:658
 #: src/CursorData.cpp:663 src/CursorData.cpp:672 src/CursorData.cpp:677
@@ -516,7 +516,7 @@ msgstr "Afspeelopties"
 
 #: src/GribUIDialogBase.cpp:1511
 msgid "Speed Control"
-msgstr "Snelheidsregeling: %s"
+msgstr "Snelheid"
 
 #: src/GribUIDialogBase.cpp:1524
 msgid "Slow"
@@ -580,11 +580,11 @@ msgstr "Zichtbaarheid knoppen"
 
 #: src/GribUIDialogBase.cpp:1674
 msgid "Attached icon bar"
-msgstr "Vaste pictogrammenbalk"
+msgstr "Vaste balk"
 
 #: src/GribUIDialogBase.cpp:1681
 msgid "Isolated icon bar"
-msgstr "Losse pictogrammenbalk"
+msgstr "Losse balk"
 
 #: src/GribUIDialogBase.cpp:1692
 msgid "Geopot. Height Choice"
@@ -663,11 +663,11 @@ msgstr "Opties voor Laden Bestand"
 
 #: src/GribUIDialogBase.cpp:2197
 msgid "Grib File Directory"
-msgstr ""
+msgstr "Map voor GRIB-bestanden"
 
 #: src/GribUIDialogBase.cpp:2204
 msgid "Browse..."
-msgstr ""
+msgstr "Bladeren..."
 
 #: src/GribUIDialogBase.cpp:2210 src/GribUIDialogBase.cpp:2329
 msgid "Start at the first forecast in GRIB file"
@@ -699,7 +699,7 @@ msgstr "Gebiedsselectie"
 
 #: src/GribUIDialogBase.cpp:2400
 msgid "Current View"
-msgstr ""
+msgstr "Huidig kaartbeeld"
 
 #: src/GribUIDialogBase.cpp:2402
 msgid "Manual Selection"
@@ -707,7 +707,7 @@ msgstr "Handmatige selectie"
 
 #: src/GribUIDialogBase.cpp:2424
 msgid "Click to select the download area, or Shift + Click + Drag on the canvas"
-msgstr ""
+msgstr "Klik om het downloadgebied te kiezen, of Shift + klik + sleep op de kaart"
 
 #: src/GribUIDialogBase.cpp:2435
 msgid "Max Lat"
@@ -752,27 +752,27 @@ msgstr "Altijd dit gebied gebruiken"
 #: src/GribUIDialogBase.cpp:2520 src/GribUIDialogBase.cpp:2596
 #: src/GribRequestDialog.cpp:786
 msgid "Download grib..."
-msgstr ""
+msgstr "GRIB downloaden..."
 
 #: src/GribUIDialogBase.cpp:2529
 msgid "Forecast length"
-msgstr ""
+msgstr "Verwachtingsduur"
 
 #: src/GribUIDialogBase.cpp:2534
 msgid "24 hours"
-msgstr ""
+msgstr "24 uur"
 
 #: src/GribUIDialogBase.cpp:2534
 msgid "3 days"
-msgstr ""
+msgstr "3 dagen"
 
 #: src/GribUIDialogBase.cpp:2535
 msgid "Maximum"
-msgstr ""
+msgstr "Maximaal"
 
 #: src/GribUIDialogBase.cpp:2544
 msgid "Model"
-msgstr ""
+msgstr "Model"
 
 #: src/GribUIDialogBase.cpp:2562 src/GribUIDialogBase.cpp:2611
 #: src/GribRequestDialog.cpp:601 src/GribRequestDialog.cpp:675
@@ -783,11 +783,11 @@ msgstr ""
 #: src/GribRequestDialog.cpp:2180 src/GribRequestDialog.cpp:2206
 #: src/GribRequestDialog.cpp:2238
 msgid "Download"
-msgstr ""
+msgstr "Downloaden"
 
 #: src/GribUIDialogBase.cpp:2605
 msgid "Update Catalog"
-msgstr ""
+msgstr "Catalogus bijwerken"
 
 #: src/GribUIDialogBase.cpp:2641
 msgid "Profile"
@@ -908,19 +908,19 @@ msgstr "Verzenden"
 
 #: src/GribUIDialogBase.cpp:3051
 msgid "World"
-msgstr ""
+msgstr "Wereld"
 
 #: src/GribUIDialogBase.cpp:3055
 msgid "Local models"
-msgstr ""
+msgstr "Lokale modellen"
 
 #: src/GribUIDialogBase.cpp:3059
 msgid "e-mail"
-msgstr ""
+msgstr "E-mail"
 
 #: src/GribUIDialogBase.cpp:3066
 msgid "XyGrib"
-msgstr ""
+msgstr "XyGrib"
 
 #: src/GribUIDialogBase.cpp:3583
 msgid "Data at Position:"
@@ -941,7 +941,7 @@ msgstr "Dialoog"
 
 #: src/GribUIDialogBase.cpp:3657
 msgid "Project position"
-msgstr ""
+msgstr "Positie vooruitberekenen"
 
 #: src/smapi.cpp:121
 msgid "MAIL Error: MAPI32.DLL is not installed or invalid on this computer!"
@@ -953,7 +953,7 @@ msgstr "Voorkeuren"
 
 #: src/grib_ui_dlg_base.h:603
 msgid "Get forecast..."
-msgstr ""
+msgstr "Verwachting ophalen"
 
 #: src/grib_ui_dlg_base.h:631
 msgid "Grib Data Table"
@@ -1093,15 +1093,15 @@ msgstr "Stroomsnelheid"
 
 #: src/GribRequestDialog.cpp:98
 msgid "<h1>OpenCPN ECMWF forecast</h1><p>Free service based on ECMWF Open Data published under the terms of Creative Commons CC-4.0-BY license</p><p>The IFS model GRIB files include information about surface temperature, atmospheric pressure, wind strength, wind direction, wave height and direction for the whole world on a 0.25 degree resolution grid with 3 hour step in the first 144 hours and 6 hour step up to 10 days.</p>The AIFS model contains data for wind, pressure and temperature on a 0.25 degree grid with 6 hour step for up to 15 days<p>The data is updated twice a day as soon as the 00z and 12z model runs finish and the results are published by ECMWF, which usually means new forecast data is available shortly after 8AM and 8PM UTC.</p><p>The grib downloaded covers the area of the primary chart canvas.</p><p>The service is provided on best effort basis and comes with no guarantees. The server is hosted by a volunteer and the service is provided free of charge and without accepting any liability whatsoever for its continuous availability, or for any loss or damage arising from its use. If you find the service useful, please consider making a donation to the OpenCPN project.</p><p>This service is based on data and products of the European Centre for Medium-Range Weather Forecasts (ECMWF).</p><p>Source: www.ecmwf.int</p><p>Disclaimer: ECMWF does not accept any liability whatsoever for any error or omission in the data, their availability, or for any loss or damage arising from their use.</p></font></body></html>"
-msgstr ""
+msgstr "<h1>OpenCPN ECMWF-verwachting</h1><p>Gratis dienst op basis van ECMWF Open Data, gepubliceerd onder de Creative Commons CC-4.0-BY-licentie</p><p>De GRIB-bestanden van het IFS-model bevatten oppervlaktetemperatuur, luchtdruk, windkracht, windrichting, golfhoogte en golfrichting voor de hele wereld op een raster van 0,25 graad, met stappen van 3 uur in de eerste 144 uur en van 6 uur tot 10 dagen.</p>Het AIFS-model bevat wind, luchtdruk en temperatuur op een raster van 0,25 graad met stappen van 6 uur tot 15 dagen<p>De gegevens worden twee keer per dag bijgewerkt, zodra de modelruns van 00z en 12z klaar zijn en ECMWF de resultaten publiceert; meestal is er kort na 8 en 20 uur UTC een nieuwe verwachting.</p><p>Het gedownloade GRIB-bestand beslaat het gebied van het hoofdkaartvenster.</p><p>De dienst wordt naar beste kunnen geleverd, zonder garanties. De server wordt beheerd door een vrijwilliger; de dienst is gratis en zonder enige aansprakelijkheid voor de beschikbaarheid of voor verlies of schade door het gebruik. Vind je de dienst nuttig, overweeg dan een donatie aan het OpenCPN-project.</p><p>Deze dienst gebruikt gegevens en producten van het European Centre for Medium-Range Weather Forecasts (ECMWF).</p><p>Bron: www.ecmwf.int</p><p>Disclaimer: ECMWF aanvaardt geen enkele aansprakelijkheid voor fouten of weglatingen in de gegevens, de beschikbaarheid ervan, of voor verlies of schade door het gebruik.</p></font></body></html>"
 
 #: src/GribRequestDialog.cpp:139
 msgid "<h1>Grib weather forecasts</h1><p>Collection of local weather models from various sources available for download over the internet.</p></font></body></html>"
-msgstr ""
+msgstr "<h1>GRIB-weersverwachtingen</h1><p>Verzameling van lokale weermodellen uit verschillende bronnen, te downloaden via internet.</p></font></body></html>"
 
 #: src/GribRequestDialog.cpp:255
 msgid "OK"
-msgstr ""
+msgstr "OK"
 
 #: src/GribRequestDialog.cpp:274
 msgid "Address used to send request eMail. (Mandatory for LINUX)"
@@ -1126,61 +1126,61 @@ msgstr "Voer uw verwachte koers in"
 #: src/GribRequestDialog.cpp:535
 #, c-format
 msgid "Downloading... %s kB / %s kB (%li%%)"
-msgstr ""
+msgstr "Downloaden... %s kB / %s kB (%li%%)"
 
 #: src/GribRequestDialog.cpp:540
 #, c-format
 msgid "Downloading... %s kB / ???"
-msgstr ""
+msgstr "Downloaden... %s kB / ???"
 
 #: src/GribRequestDialog.cpp:602 src/GribRequestDialog.cpp:808
 #: src/GribRequestDialog.cpp:861 src/GribRequestDialog.cpp:912
 msgid "Download canceled"
-msgstr ""
+msgstr "Download geannuleerd"
 
 #: src/GribRequestDialog.cpp:615
 msgid "Preparing data on server..."
-msgstr ""
+msgstr "Gegevens worden op de server klaargezet..."
 
 #: src/GribRequestDialog.cpp:659 src/GribRequestDialog.cpp:983
 #, c-format
 msgid "Download complete: %s"
-msgstr ""
+msgstr "Download voltooid: %s"
 
 #: src/GribRequestDialog.cpp:672 src/GribRequestDialog.cpp:843
 #: src/GribRequestDialog.cpp:908 src/GribRequestDialog.cpp:924
 #: src/GribRequestDialog.cpp:938 src/GribRequestDialog.cpp:997
 #: src/GribRequestDialog.cpp:2257
 msgid "Download failed"
-msgstr ""
+msgstr "Download mislukt"
 
 #: src/GribRequestDialog.cpp:714
 msgid "Local high resolution forecasts"
-msgstr ""
+msgstr "Lokale verwachtingen met hoge resolutie"
 
 #: src/GribRequestDialog.cpp:790
 msgid "Select grib..."
-msgstr ""
+msgstr "Kies GRIB..."
 
 #: src/GribRequestDialog.cpp:821
 msgid "Downloading catalog update..."
-msgstr ""
+msgstr "Catalogus-update downloaden..."
 
 #: src/GribRequestDialog.cpp:841
 msgid "Catalog update complete."
-msgstr ""
+msgstr "Catalogus bijgewerkt."
 
 #: src/GribRequestDialog.cpp:874
 msgid "Downloading grib..."
-msgstr ""
+msgstr "GRIB downloaden..."
 
 #: src/GribRequestDialog.cpp:880
 msgid "Download can't be started."
-msgstr ""
+msgstr "De download kan niet starten."
 
 #: src/GribRequestDialog.cpp:981
 msgid "Grib download complete."
-msgstr ""
+msgstr "GRIB-download voltooid."
 
 #: src/GribRequestDialog.cpp:1184
 msgid "Sorry...\n"
@@ -1246,11 +1246,11 @@ msgstr "Doorgaan..."
 #: src/GribRequestDialog.cpp:1886
 msgid "Sender or recipient e-mail address seems invalid.\n"
 "Please correct it in the configuration file."
-msgstr ""
+msgstr "Het e-mailadres van afzender of ontvanger lijkt ongeldig.\nPas het aan in het configuratiebestand."
 
 #: src/GribRequestDialog.cpp:1888
 msgid "Error"
-msgstr ""
+msgstr "Fout"
 
 #: src/GribRequestDialog.cpp:1918 src/GribRequestDialog.cpp:1924
 msgid "Your request is ready. An email is prepared in your email environment. \n"
@@ -1278,41 +1278,41 @@ msgstr "Het verzoek kan niet verzonden worden. Controleer uw\n"
 
 #: src/GribRequestDialog.cpp:2086
 msgid "Download cancelled"
-msgstr ""
+msgstr "Download geannuleerd"
 
 #: src/GribRequestDialog.cpp:2097
 #, c-format
 msgid "Can't download GRIB file bigger than %d MB"
-msgstr ""
+msgstr "Kan geen GRIB-bestand groter dan %d MB downloaden"
 
 #: src/GribRequestDialog.cpp:2112
 msgid "Preparing GRIB file on server..."
-msgstr ""
+msgstr "GRIB-bestand wordt op de server klaargezet..."
 
 #: src/GribRequestDialog.cpp:2145
 msgid "Grib request failed"
-msgstr ""
+msgstr "GRIB-aanvraag mislukt"
 
 #: src/GribRequestDialog.cpp:2179
 msgid "Server Error"
-msgstr ""
+msgstr "Serverfout"
 
 #: src/GribRequestDialog.cpp:2205
 msgid "Error parsing XML file from server"
-msgstr ""
+msgstr "Fout bij het lezen van het XML-bestand van de server"
 
 #: src/GribRequestDialog.cpp:2212
 msgid "Downloading GRIB file"
-msgstr ""
+msgstr "GRIB-bestand downloaden"
 
 #: src/GribRequestDialog.cpp:2243
 msgid "Download complete"
-msgstr ""
+msgstr "Download voltooid"
 
 #: src/GribRequestDialog.cpp:2352 src/GribRequestDialog.cpp:2358
 #: src/GribRequestDialog.cpp:2483 src/GribRequestDialog.cpp:2489
 msgid "Latest"
-msgstr ""
+msgstr "Nieuwste"
 
 #: src/CursorData.cpp:288
 msgid "Data at cursor position"
