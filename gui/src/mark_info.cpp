@@ -75,6 +75,7 @@ WX_DEFINE_OBJARRAY(ArrayOfBitmaps);
 
 MarkInfoDlg* g_pMarkInfoDialog;
 
+#ifndef __OCPN__IOS__  // iOS version: app/ios/connections_ios.cpp
 OCPNIconCombo::OCPNIconCombo(wxWindow* parent, wxWindowID id,
                              const wxString& value, const wxPoint& pos,
                              const wxSize& size, int n,
@@ -137,6 +138,7 @@ void OCPNIconCombo::Clear() {
   wxOwnerDrawnComboBox::Clear();
   bmpArray.Clear();
 }
+#endif  // __OCPN__IOS__
 
 //-------------------------------------------------------------------------------
 //
@@ -339,7 +341,9 @@ void MarkInfoDlg::Create() {
   m_bcomboBoxIcon->SetMinSize(wxSize(-1, icon_size));
 
   wxStaticText* icon_label = new wxStaticText(props_panel, wxID_ANY, _("Icon"));
+#ifndef __OCPN__IOS__  // iOS: label above the field, a fixed width truncated it
   icon_label->SetMinSize(wxSize(label_size, -1));
+#endif
   props_sizer->Add(icon_label, 0, wxALIGN_CENTER_VERTICAL);
   props_sizer->Add(m_bcomboBoxIcon, 0, wxEXPAND);
 
@@ -813,6 +817,11 @@ void MarkInfoDlg::RecalculateSize() {
 
   m_defaultClientSize = GetClientSize();
   Center();
+#elif defined(__OCPN__IOS__)
+  // iOS: full screen; window_fit.cpp keeps it below the status bar.
+  // Otherwise it opened over the lower half and wider than an iPhone.
+  Layout();
+  SetSize(GetParent()->GetClientSize());
 #else
   wxSize dsize = GetParent()->GetClientSize();
   SetSize(-1, wxMax(GetSize().y, dsize.y / 1.5));

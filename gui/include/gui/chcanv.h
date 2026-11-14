@@ -63,11 +63,12 @@
 #include "rollover_win.h"
 #include "s57_sector.h"
 #include "tc_win.h"
+#include "ocpn_region.h"  // iOS: m_ocpnios_cache_rendered
 #include "undo.h"
 
 WX_DEFINE_ARRAY_PTR(ChartCanvas *, arrayofCanvasPtr);
 
-#ifdef __ANDROID__
+#if defined(__ANDROID__) || defined(__OCPN__IOS__)  // iOS: 2 fields
 #define STAT_FIELD_TICK -1
 #define STAT_FIELD_SOGCOG 0
 #define STAT_FIELD_CURSOR_LL -1
@@ -479,6 +480,13 @@ public:
    */
   void DoMovement(long dt);
   void StopMovement();
+#ifdef __OCPN__IOS__
+  // iOS: stop drag inertia immediately (database rebuild).
+  void StopDragInertia() {
+    m_chart_drag_inertia_timer.Stop();
+    m_chart_drag_inertia_active = false;
+  }
+#endif
 
   void StartTimedMovementVP(double target_lat, double target_lon, int nstep);
   void DoTimedMovementVP();
@@ -1355,6 +1363,23 @@ private:
   wxLongLong m_chart_drag_inertia_time;
   wxLongLong m_chart_drag_inertia_start_time;
   bool m_chart_drag_inertia_active;
+#ifdef __OCPN__IOS__
+  bool m_ocpnios_pinch_seen = false;  // iOS: no inertia after a pinch
+  double m_ocpnios_compass_cs =
+      0;  // iOS: Retina factor at last compass scaling
+  // iOS: chart area (screen pixels) drawn into m_cached_chart_bm
+  OCPNRegion m_ocpnios_cache_rendered;
+  // iOS hooks, defined in app/ios/canvas_ios.cpp
+  void IosOnZoom(wxZoomGestureEvent &event);
+  bool IosClampDragTime(size_t n_vel, double &tacc);
+  void IosCapDragVelocity(size_t n_vel, double tacc);
+  void IosClampViewPoint(double &lat, double &scale_ppm, int projection);
+  void IosOnSizeScale();
+  void IosRedrawNewCoverage(wxMemoryDC &temp_dc, ViewPort &svp,
+                            OCPNRegion &chart_get_region,
+                            OCPNRegion &update_region, int dx, int dy);
+  void IosUpdateCompassScale(bool &b_update);
+#endif
   double m_last_elapsed;
   std::vector<int> m_drag_vec_x;
   std::vector<int> m_drag_vec_y;

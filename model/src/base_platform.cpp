@@ -232,6 +232,13 @@ wxString& AbstractPlatform::GetHomeDir() {
     m_homeDir.Append("opencpn");
 #endif
 
+#ifdef __OCPN__IOS__
+    // iOS: everything OpenCPN writes lives in the app sandbox under
+    // Library/Application Support/opencpn; create that dir fully here.
+    m_homeDir = wxGetHomeDir() + "/Library/Application Support/opencpn";
+    wxFileName::Mkdir(m_homeDir, wxS_DIR_DEFAULT, wxPATH_MKDIR_FULL);
+#endif
+
     appendOSDirSlash(&m_homeDir);
   }
 
@@ -275,6 +282,10 @@ wxString& AbstractPlatform::GetSharedDataDir() {
 
 #ifdef __ANDROID__
     m_SData_Dir = androidGetSharedDir();
+#endif
+#ifdef __OCPN__IOS__
+    // iOS: shared data is in the app bundle under SharedSupport/
+    m_SData_Dir = wxFileName(GetExePath()).GetPath() + "/SharedSupport/";
 #endif
 
     if (g_bportable) m_SData_Dir = GetHomeDir();
@@ -367,6 +378,11 @@ wxString& AbstractPlatform::DefaultPrivateDataDir() {
 
 #ifdef __ANDROID__
     m_PrivateDataDir = androidGetPrivateDir();
+#endif
+#ifdef __OCPN__IOS__
+    m_PrivateDataDir = GetHomeDir();  // iOS: see GetHomeDir()
+    if (m_PrivateDataDir.Last() == wxFileName::GetPathSeparator())
+      m_PrivateDataDir.RemoveLast();
 #endif
   }
   return m_PrivateDataDir;
@@ -643,6 +659,9 @@ wxString& AbstractPlatform::GetConfigFileName() {
     appendOSDirSlash(&m_config_file_name);
     m_config_file_name += "opencpn.conf";
 #endif
+#ifdef __OCPN__IOS__
+    m_config_file_name = GetHomeDir() + "opencpn.conf";  // iOS
+#endif
     if (!g_configdir.empty()) {
       m_config_file_name = g_configdir;
       m_config_file_name.Append("/opencpn.conf");
@@ -668,6 +687,11 @@ bool BasePlatform::InitializeLogFile() {
   mlog_file.Append("Logs/");  // so, on OS X, opencpn.log ends up in
                               // ~/Library/Logs which makes it accessible to
                               // Applications/Utilities/Console....
+#endif
+#ifdef __OCPN__IOS__
+  // iOS: log file in Documents/log, so it shows in the Files app under
+  // "OpenCPN > log", apart from charts and other files.
+  mlog_file = wxStandardPaths::Get().GetDocumentsDir() + "/log/";
 #endif
 
   // create the opencpn "home" directory if we need to
@@ -747,6 +771,10 @@ wxString AbstractPlatform::GetPluginDataPath() {
 #ifdef __ANDROID__
   wxString pluginDir = GetPrivateDataDir() + "/plugins";
   dirs += pluginDir;
+#elif defined(__OCPN__IOS__)
+  // Built-in plugins: data in the app bundle,
+  // SharedSupport/plugins/<name>/data.
+  dirs = GetSharedDataDir() + "plugins";
 #else
   auto const osSystemId = wxPlatformInfo::Get().GetOperatingSystemId();
   if (isFlatpacked()) {
@@ -781,6 +809,18 @@ void AbstractPlatform::ShowBusySpinner() {
     m_isBusy = true;
   }
 }
+#elif defined(__OCPN__IOS__)
+// iOS: there is no busy cursor on iOS, so e.g. while preparing a new ENC chart
+// the app seemed to hang. Show a small busy indicator with a spinner
+// (app/ios/startup_busy.mm).
+void ocpnios_ShowBusyHud();
+void ocpnios_HideBusyHud();
+void AbstractPlatform::ShowBusySpinner() {
+  if (!m_isBusy) {
+    ocpnios_ShowBusyHud();
+    m_isBusy = true;
+  }
+}
 #else
 void AbstractPlatform::ShowBusySpinner() {
   if (!m_isBusy) {
@@ -794,6 +834,13 @@ void AbstractPlatform::ShowBusySpinner() {
 void AbstractPlatform::HideBusySpinner() {
   if (m_isBusy) {
     androidHideBusyIcon();
+    m_isBusy = false;
+  }
+}
+#elif defined(__OCPN__IOS__)
+void AbstractPlatform::HideBusySpinner() {
+  if (m_isBusy) {
+    ocpnios_HideBusyHud();
     m_isBusy = false;
   }
 }

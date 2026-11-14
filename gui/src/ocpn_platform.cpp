@@ -533,7 +533,7 @@ void OCPNPlatform::Initialize_3() {
 #endif
 
   bool bAndroid = false;
-#ifdef __ANDROID__
+#if defined(__ANDROID__) || defined(__OCPN__IOS__)  // iOS: always GL
   bAndroid = true;
 #endif
 
@@ -556,6 +556,11 @@ void OCPNPlatform::Initialize_3() {
     g_GLOptions.m_bUseAcceleratedPanning = true;
     g_GLOptions.m_bTextureCompression = true;
     g_GLOptions.m_bTextureCompressionCaching = true;
+#ifdef __OCPN__IOS__
+    // iOS: S3TC/ETC1 texture compression under GLES2 is untested on iOS; off.
+    g_GLOptions.m_bTextureCompression = false;
+    g_GLOptions.m_bTextureCompressionCaching = false;
+#endif
 
     g_GLOptions.m_iTextureDimension = 512;
     g_GLOptions.m_iTextureMemorySize = 64;
@@ -832,7 +837,14 @@ bool OCPNPlatform::BuildGLCaps(void *pbuf) {
 bool OCPNPlatform::IsGLCapable() {
 #ifdef ocpnUSE_GL
 
-#ifdef __ANDROID__
+#if defined(__ANDROID__) || defined(__OCPN__IOS__)
+  // iOS: the GL test via a separate helper program is not possible on iOS;
+  // OpenGL ES is always there. The setting (Display Options > Extended >
+  // OpenGL) decides whether the GL path is used. Escape hatch: OCPNIOS_NO_GL=1
+  // forces raster.
+#ifdef __OCPN__IOS__
+  if (wxGetenv("OCPNIOS_NO_GL")) return false;
+#endif
   return true;
 #elif defined(CLI)
   return false;
@@ -911,6 +923,15 @@ void OCPNPlatform::SetLocaleSearchPrefixes() {
 
   wxString locale_location = GetSharedDataDir() + "locale";
   wxLocale::AddCatalogLookupPathPrefix(locale_location);
+
+#elif defined(__OCPN__IOS__)
+
+  // iOS: translations in the app bundle (SharedSupport/locale/<lang>/
+  // LC_MESSAGES/opencpn.mo and wxstd-3.3.mo), as on Android. The Unix branch
+  // below looked in /usr/local/share/locale, which does not exist on iOS.
+  wxString locale_location = GetSharedDataDir() + _T("locale");
+  wxLocale::AddCatalogLookupPathPrefix(locale_location);
+  wxLogMessage(_T("Adding catalog lookup path:  ") + locale_location);
 
 #elif defined(__UNIX__) && !defined(__WINE__)
 
@@ -1170,6 +1191,10 @@ void OCPNPlatform::SetDefaultOptions() {
   g_n_ownship_min_mm = 8;
   g_bShowMuiZoomButtons = true;
   g_bresponsive = false;
+#ifdef __OCPN__IOS__
+  // iOS: scale toolbar and compass to the screen size, as on Android.
+  g_bresponsive = true;
+#endif
 
   // Initial S52/S57 options
   if (pConfig) {
@@ -1614,7 +1639,11 @@ MyConfig *OCPNPlatform::GetConfigObject() {
 //--------------------------------------------------------------------------
 
 bool OCPNPlatform::hasInternalGPS(wxString profile) {
-#ifdef __ANDROID__
+#ifdef __OCPN__IOS__
+  // iOS: Core Location is always present (iPad without cellular: Wi-Fi
+  // position).
+  return true;
+#elif defined(__ANDROID__)
   bool t = androidDeviceHasGPS();
   //    qDebug() << "androidDeviceHasGPS" << t;
   return t;
@@ -1650,7 +1679,9 @@ long OCPNPlatform::GetDefaultToolbarOrientation() {
 }
 
 int OCPNPlatform::GetStatusBarFieldCount() {
-#ifdef __ANDROID__
+  // iOS: as on Android, 1 or 2 fields on a narrow screen; otherwise 5 fields in
+  // 440 pt width and an unreadably small font.
+#if defined(__ANDROID__) || defined(__OCPN__IOS__)
   int count = 1;
 
   //  Make a horizontal measurement...

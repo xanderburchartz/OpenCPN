@@ -21,7 +21,7 @@
  * Implement macutils.h -- MacOS hardware probing functions
  */
 
-#ifdef __APPLE__
+#if defined(__APPLE__) && !defined(__OCPN__IOS__)  // iOS: no IOKit
 
 #include <errno.h>
 #include <fcntl.h>

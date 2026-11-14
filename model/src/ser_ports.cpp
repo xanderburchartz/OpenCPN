@@ -502,6 +502,11 @@ wxArrayString* EnumerateSerialPorts() { return EnumerateUdevSerialPorts(); }
 
 wxArrayString* EnumerateSerialPorts() { return androidGetSerialPortsArray(); }
 
+#elif defined(__OCPN__IOS__)
+
+// iOS: an iPad/iPhone has no serial ports; NMEA comes over the network.
+wxArrayString* EnumerateSerialPorts(void) { return new wxArrayString; }
+
 #elif defined(__WXOSX__)
 
 wxArrayString* EnumerateSerialPorts() {

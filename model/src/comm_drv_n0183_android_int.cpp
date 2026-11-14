@@ -47,6 +47,11 @@
 #ifdef __ANDROID__
 #include "androidUTIL.h"
 #endif
+#ifdef __OCPN__IOS__
+// iOS: device GPS, compass and barometer (app/ios/internal_gps.mm).
+extern bool androidStartGPS(wxEvtHandler* consumer);
+extern bool androidStopGPS();
+#endif
 
 typedef enum DS_ENUM_BUFFER_STATE {
   DS_RX_BUFFER_EMPTY,

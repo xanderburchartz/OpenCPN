@@ -38,8 +38,12 @@
 #include <ShellScalingApi.h>
 #include <locale>
 #include <codecvt>
-#elif __APPLE__
+#elif defined(__APPLE__) && \
+    !defined(__OCPN__IOS__)  // iOS: CGDisplay is macOS only
 #include <CoreGraphics/CoreGraphics.h>
+#elif defined(__OCPN__IOS__)
+#include <QGuiApplication>
+#include <QScreen>
 #endif
 
 std::vector<OCPN_MonitorInfo> g_monitor_info;
@@ -221,7 +225,8 @@ void EnumerateMonitors() {
       }
     }
   }
-#elif __APPLE__
+#elif defined(__APPLE__) && \
+    !defined(__OCPN__IOS__)  // iOS: CGDisplay is macOS only
   CGDirectDisplayID displayArray[32];
   uint32_t displayCount;
   CGGetOnlineDisplayList(32, displayArray, &displayCount);
@@ -247,6 +252,26 @@ void EnumerateMonitors() {
          static_cast<size_t>(width), static_cast<size_t>(height),
          static_cast<size_t>(pixel_width), static_cast<size_t>(pixel_height),
          100});
+  }
+#elif defined(__OCPN__IOS__)
+  // iOS: screen size via Qt. QScreen::physicalSize() uses a per-device pixel
+  // density table on iOS. Without this OpenCPN used the fallback "Dummy
+  // monitor", 340 mm wide: text and symbols too small, and no compact Settings
+  // layout (which applies below 80 mm).
+  if (QGuiApplication::instance() && !getenv("OCPNIOS_DUMMY_DISPLAY")) {
+    if (QScreen* scr = QGuiApplication::primaryScreen()) {
+      const QSizeF mm = scr->physicalSize();
+      const QSize pt = scr->size();
+      const double dpr = scr->devicePixelRatio();
+      if (mm.width() > 0 && pt.width() > 0) {
+        g_monitor_info.push_back(
+            {"iOS", static_cast<size_t>(mm.width() + 0.5),
+             static_cast<size_t>(mm.height() + 0.5),
+             static_cast<size_t>(pt.width()), static_cast<size_t>(pt.height()),
+             static_cast<size_t>(pt.width() * dpr + 0.5),
+             static_cast<size_t>(pt.height() * dpr + 0.5), 100});
+      }
+    }
   }
 #endif
   if (g_monitor_info.size() == 0) {
