@@ -90,8 +90,30 @@
 #include "androidUTIL.h"
 #endif
 
+#ifdef __OCPN__IOS__
+#include "model/ios_hooks.h"
+static const ocpnios_StaticPlugin* IosStaticPlugin(const wxString& path) {
+  return ocpnios_FindStaticPlugin(
+      wxFileName(path).GetFullName().ToStdString().c_str());
+}
+/** System names plus the common names of all built-in plugins: these belong to
+ *  the app and must not be removed as "orphan without catalog". */
+static std::vector<std::string> WithIosStatic(std::vector<std::string> v) {
+  for (auto p = ocpnios_StaticPlugins(); p->file_name; ++p)
+    if (p->common_name && *p->common_name) v.push_back(p->common_name);
+  return v;
+}
+#endif
+
+#ifdef __OCPN__IOS__
+static const std::vector<std::string> SYSTEM_PLUGINS_UPSTREAM = {
+    "chartdownloader", "wmm", "dashboard", "grib", "demo"};
+static const std::vector<std::string> SYSTEM_PLUGINS =
+    WithIosStatic(SYSTEM_PLUGINS_UPSTREAM);
+#else
 static const std::vector<std::string> SYSTEM_PLUGINS = {
     "chartdownloader", "wmm", "dashboard", "grib", "demo"};
+#endif
 
 /** Return complete PlugInContainer matching pic. */
 static PlugInContainer* GetContainer(const PlugInData& pd,
@@ -110,13 +132,24 @@ static bool IsSystemPluginPath(const std::string& path) {
   const std::string lc_path = ocpn::tolower(path);
   for (const auto& p : kPlugins)
     if (lc_path.find(p) != std::string::npos) return true;
+#ifdef __OCPN__IOS__
+  // Everything built into the app (including radar_pi) counts as a system
+  // plugin.
+  if (IosStaticPlugin(wxString(path))) return true;
+#endif
   return false;
 }
 
 /** Return true if name is a valid system plugin name. */
 static bool IsSystemPluginName(const std::string& name) {
+#ifdef __OCPN__IOS__
+  // iOS: built-in plugins count; otherwise removed as orphan without catalog.
+  static const std::vector<std::string> kPlugins =
+      WithIosStatic({"chartdownloader", "wmm", "dashboard", "grib", "demo"});
+#else
   static const std::vector<std::string> kPlugins = {
       "chartdownloader", "wmm", "dashboard", "grib", "demo"};
+#endif
   auto found = std::find(kPlugins.begin(), kPlugins.end(), ocpn::tolower(name));
   return found != kPlugins.end();
 }
@@ -206,7 +239,17 @@ void PluginLoader::MarkAsLoadable(const std::string& library_path) {
 std::string PluginLoader::GetPluginVersion(
     const PlugInData pd,
     std::function<const PluginMetadata(const std::string&)> get_metadata) {
+#ifdef __OCPN__IOS__
+  // iOS: all built-in plugins count as system plugins (see IsSystemPluginName),
+  // but only OpenCPN's own ones carry the OpenCPN version; the others show
+  // theirs.
+  if (std::find(SYSTEM_PLUGINS_UPSTREAM.begin(), SYSTEM_PLUGINS_UPSTREAM.end(),
+                ocpn::tolower(pd.m_common_name.ToStdString())) !=
+      SYSTEM_PLUGINS_UPSTREAM.end())
+    return VERSION_FULL;
+#else
   if (IsSystemPluginName(pd.m_common_name.ToStdString())) return VERSION_FULL;
+#endif
   auto loader = PluginLoader::GetInstance();
   auto pic = GetContainer(pd, *loader->GetPlugInArray());
   if (!pic) {
@@ -220,6 +263,10 @@ std::string PluginLoader::GetPluginVersion(
   std::string detail_suffix(metadata.is_imported ? _(" [Imported]") : "");
   if (metadata.is_orphan) detail_suffix = _(" [Orphan]");
 
+#ifdef __OCPN__IOS__
+  if (!pic->m_pplugin && !pic->m_version_str.IsEmpty())
+    return pic->m_version_str.ToStdString() + detail_suffix;
+#endif
   int v_major(0);
   int v_minor(0);
   if (pic->m_pplugin) {
@@ -487,6 +534,17 @@ bool PluginLoader::LoadAllPlugIns(bool load_enabled, bool keep_orphans) {
     wxLogMessage("Loading plugins from dir: %s", wxdir.mb_str().data());
     if (LoadPlugInDirectory(wxdir, load_enabled)) any_dir_loaded = true;
   }
+#ifdef __OCPN__IOS__
+  // The built-in plugins are not files in the bundle; offer them as if they
+  // were in the last (system) dir, so the rest of the loader works unchanged.
+  if (!dirs.empty()) {
+    wxString base(dirs.back());
+    for (auto p = ocpnios_StaticPlugins(); p->file_name; ++p) {
+      if (LoadPluginCandidate(base + sep + p->file_name, load_enabled))
+        any_dir_loaded = true;
+    }
+  }
+#endif
 
   // Read the default ocpn-plugins.xml, and update/merge the plugin array
   // This only needs to happen when the entire universe (enabled and disabled)
@@ -515,7 +573,14 @@ bool PluginLoader::LoadPluginCandidate(const wxString& file_name,
     }
     CreateLoadStamp(plugin_loadstamp.ToStdString());
   }
+#ifdef __OCPN__IOS__
+  // Built-in plugin: no file, fixed time (otherwise wx logs a system error).
+  wxDateTime plugin_modification =
+      IosStaticPlugin(file_name) ? wxDateTime((time_t)0)
+                                 : wxFileName(file_name).GetModificationTime();
+#else
   wxDateTime plugin_modification = wxFileName(file_name).GetModificationTime();
+#endif
   wxLog::FlushActive();
 
 #ifdef __ANDROID__
@@ -660,6 +725,26 @@ bool PluginLoader::LoadPluginCandidate(const wxString& file_name,
         }
       }
       pic->m_version_str = found_version;
+#ifdef __OCPN__IOS__
+      // iOS: built-in plugins have no metadata. Store the version now, because
+      // a disabled plugin is unloaded again below and the plugin list then
+      // showed "0.0" (GetPluginVersion).
+      if (found_version.empty()) {
+        if (auto p117 = dynamic_cast<opencpn_plugin_117*>(pic->m_pplugin)) {
+          pic->m_version_str =
+              SemanticVersion(
+                  p117->GetPlugInVersionMajor(), p117->GetPlugInVersionMinor(),
+                  p117->GetPlugInVersionPatch(), p117->GetPlugInVersionPost(),
+                  p117->GetPlugInVersionPre(), p117->GetPlugInVersionBuild())
+                  .to_string();
+        } else {
+          pic->m_version_str =
+              SemanticVersion(pic->m_pplugin->GetPlugInVersionMajor(),
+                              pic->m_pplugin->GetPlugInVersionMinor())
+                  .to_string();
+        }
+      }
+#endif
       pic->m_short_description = pic->m_pplugin->GetShortDescription();
       pic->m_long_description = pic->m_pplugin->GetLongDescription();
       pic->m_version_major = pic->m_pplugin->GetPlugInVersionMajor();
@@ -1262,6 +1347,11 @@ FailureEpilogue:
 
 bool PluginLoader::CheckPluginCompatibility(const wxString& plugin_file) {
   bool b_compat = false;
+#ifdef __OCPN__IOS__
+  // Built in and built with the same wxWidgets; separate plugins are not
+  // possible on iOS.
+  return IosStaticPlugin(plugin_file) != nullptr;
+#endif
 #ifdef __WXOSX__
   // TODO: Actually do some tests (In previous versions b_compat was initialized
   // to true, so the actual behavior was exactly like this)
@@ -1521,6 +1611,14 @@ PlugInContainer* PluginLoader::LoadPlugIn(const wxString& plugin_file,
     return nullptr;
   }
 
+#ifdef __OCPN__IOS__
+  const ocpnios_StaticPlugin* ios_static = IosStaticPlugin(plugin_file);
+  if (!ios_static) {
+    wxLogMessage("Ignoring non-builtin plugin on iOS: %s",
+                 plugin_file.ToStdString().c_str());
+    return nullptr;
+  }
+#else
   if (!wxIsReadable(plugin_file)) {
     wxLogMessage("Ignoring unreadable plugin %s",
                  plugin_file.ToStdString().c_str());
@@ -1528,6 +1626,7 @@ PlugInContainer* PluginLoader::LoadPlugIn(const wxString& plugin_file,
     load_errors.push_back(le);
     return nullptr;
   }
+#endif
 
   // Check if blacklisted, exit if so.
   auto sts =
@@ -1548,6 +1647,12 @@ PlugInContainer* PluginLoader::LoadPlugIn(const wxString& plugin_file,
   pic->m_status =
       PluginStatus::Unmanaged;  // Status is updated later, if necessary
 
+#ifdef __OCPN__IOS__
+  // Built-in: do not load a library, take the functions from the list.
+  create_t* create_plugin = (create_t*)ios_static->create;
+  destroy_t* destroy_plugin = (destroy_t*)ios_static->destroy;
+  pic->m_destroy_fn = destroy_plugin;
+#else
   // load the library
   if (pic->m_library.IsLoaded()) pic->m_library.Unload();
   pic->m_library.Load(plugin_file);
@@ -1600,6 +1705,7 @@ PlugInContainer* PluginLoader::LoadPlugIn(const wxString& plugin_file,
     }
     return nullptr;
   }
+#endif  // __OCPN__IOS__
 
   // create an instance of the plugin class
   opencpn_plugin* plug_in = create_plugin(this);

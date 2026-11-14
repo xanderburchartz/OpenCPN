@@ -63,6 +63,9 @@
 #include "ocpn_frame.h"
 #include "ocpn_platform.h"
 #include "ocpn_plugin.h"
+#ifdef __OCPN__IOS__
+#include <QWidget>
+#endif
 #include "options.h"
 #include "piano.h"
 #include "pluginmanager.h"
@@ -537,7 +540,15 @@ wxScrolledWindow* AddOptionsPage(OptionsParentPI parent, wxString title) {
       break;
   }
 
+#ifdef __OCPN__IOS__
+  // iOS: mark a plugin page (options.cpp IosGoLevel: no Apply).
+  wxScrolledWindow* page = g_pOptions->AddPage(parentid, title);
+  if (page && page->GetHandle())
+    page->GetHandle()->setProperty("ocpnios_pluginpage", true);
+  return page;
+#else
   return g_pOptions->AddPage(parentid, title);
+#endif
 }
 
 bool DeleteOptionsPage(wxScrolledWindow* page) {
