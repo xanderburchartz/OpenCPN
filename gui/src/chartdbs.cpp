@@ -1483,6 +1483,17 @@ bool ChartDatabase::Read(const wxString &filePath) {
     msg.Printf("  Chart directory #%d: ", iDir);
     msg.Append(dir);
     wxLogMessage(msg);
+#ifdef __OCPN__IOS__
+    // iOS: the app's data container gets a new path on reinstall. A chart
+    // database with a directory that no longer exists refers to charts at the
+    // old path; rebuild it from the (restored) config in that case.
+    if (!wxDirExists(dir.BeforeFirst('^'))) {
+      wxLogMessage(
+          "iOS: Chartdb: chart directory no longer exists, rebuilding "
+          "database");
+      return false;
+    }
+#endif
     m_chartDirs.Add(dir);
   }
 
