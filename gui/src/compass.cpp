@@ -144,7 +144,7 @@ void ocpnCompass::Paint(ocpnDC& dc) {
       glDisable(GL_TEXTURE_2D);
 
     } else {
-#ifdef __WXOSX__
+#if defined(__WXOSX__) || defined(__OCPN__IOS__)  // iOS: Retina like macOS
       // Support MacBook Retina display
       if (g_bopengl) {
         double scale = m_parent->GetContentScaleFactor();
@@ -269,6 +269,11 @@ void ocpnCompass::UpdateStatus(bool bnew) {
 void ocpnCompass::SetScaleFactor(float factor) {
   ocpnStyle::Style* style = g_StyleManager->GetCurrentStyle();
 
+#ifdef __OCPN__IOS__
+  // iOS: in the GL path the chart uses physical pixels (Retina x3); the compass
+  // position already does (UpdateGPSCompassStatusBox), the size not yet.
+  if (g_bopengl) factor *= m_parent->GetContentScaleFactor();
+#endif
   if (factor > 0.1)
     m_scale = factor;
   else
@@ -304,9 +309,20 @@ void ocpnCompass::SetScaleFactor(float factor) {
   if (!style->marginsInvisible)
     width += style->GetCompassLeftMargin() + style->GetToolSeparation();
 
+#ifdef __OCPN__IOS__
+  // iOS: only the size, not the position. This function is also called after
+  // positioning (UpdateGPSCompassStatusBox), e.g. at the end of startup and
+  // after Course Up (ocpn_frame.cpp); the compass then jumped to the top left,
+  // over the menu. The chart canvas sets the position.
+  m_rect = wxRect(
+      m_rect.GetPosition(),
+      wxSize(width, compassBg.GetHeight() + style->GetCompassTopMargin() +
+                        style->GetCompassBottomMargin()));
+#else
   m_rect = wxRect(style->GetCompassXOffset(), style->GetCompassYOffset(), width,
                   compassBg.GetHeight() + style->GetCompassTopMargin() +
                       style->GetCompassBottomMargin());
+#endif
 }
 
 void ocpnCompass::CreateBmp(bool newColorScheme) {

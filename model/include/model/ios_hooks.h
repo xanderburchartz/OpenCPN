@@ -31,6 +31,8 @@ class wxAuiManager;
 
 void ocpnios_FloatPluginPanes(wxAuiManager *mgr);
 void ocpnios_HideBusyHud();
+int ocpnios_OverlayInsetLeft();
+int ocpnios_OverlayInsetRight();
 void ocpnios_ShowBusyHud();
 void ocpnios_ShowStartupBusy();
 void ocpnios_TidyDocuments();

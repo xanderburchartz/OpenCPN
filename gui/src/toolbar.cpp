@@ -30,6 +30,9 @@
 
 #include "config.h"
 #include "toolbar.h"
+#ifdef __OCPN__IOS__
+#include "model/ios_hooks.h"
+#endif
 
 #include "model/ais_state_vars.h"
 #include "model/config_vars.h"
@@ -443,6 +446,19 @@ void ocpnFloatingToolbarDialog::SetDefaultPosition() {
 
     m_position.x = wxMax(m_dock_min_x, m_position.x);
     m_position.y = wxMax(m_dock_min_y, m_position.y);
+#ifdef __OCPN__IOS__
+    // iOS: keep clear of the rounded screen corner (landscape).
+    // Start from the dock position in every orientation: otherwise the
+    // landscape position (indented, centered) remained after rotating back to
+    // portrait.
+    m_position.x = wxMax(m_dock_min_x, ocpnios_OverlayInsetLeft());
+    m_position.y = m_dock_min_y;
+    // Landscape: center vertically, so the toolbar always stays clear of the
+    // top and bottom corners.
+    if (cs.x > cs.y && m_ptoolbar->m_maxHeight > 0 &&
+        m_ptoolbar->m_maxHeight < cs.y)
+      m_position.y = wxMax(m_dock_min_y, (cs.y - m_ptoolbar->m_maxHeight) / 2);
+#endif
 
     m_position.y += m_auxOffsetY;
 
@@ -543,6 +559,17 @@ void ocpnFloatingToolbarDialog::Realize() {
     m_ptoolbar->Realize();
     m_ptoolbar->CreateBitmap();
     m_toolbar_image.Destroy();
+#ifdef __OCPN__IOS__
+    // iOS: the position (centered in landscape) depends on the height, which is
+    // only known after Realize (0 at creation: the toolbar ended up too low).
+    // Reposition when the size changes.
+    static wxSize s_lastSize;
+    const wxSize now(m_ptoolbar->m_maxWidth, m_ptoolbar->m_maxHeight);
+    if (now != s_lastSize && now.y > 0) {
+      s_lastSize = now;
+      SetDefaultPosition();
+    }
+#endif
   }
 }
 
@@ -1006,7 +1033,9 @@ bool ocpnToolBarSimple::Create(ocpnFloatingToolbarDialog *parent, wxWindowID id,
 ocpnToolBarSimple::~ocpnToolBarSimple() {}
 
 void ocpnToolBarSimple::EnableTooltips() {
-#ifndef __ANDROID__
+  // iOS: no toolbar tooltips, as on Android; with touch they only appear after
+  // a tap, as an empty grey box, and then bring the main window to the front.
+#if !defined(__ANDROID__) && !defined(__OCPN__IOS__)
   m_btooltip_show = true;
 #endif
 }
