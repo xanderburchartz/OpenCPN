@@ -33,6 +33,7 @@ class EventVar;
 class MyConfig;
 class wxAuiManager;
 class wxCheckBox;
+class wxColour;
 class wxDC;
 class wxDialog;
 class wxFrame;
@@ -69,6 +70,9 @@ void ocpnios_NmeaFilterRowLayout(wxPanel* row, wxCheckBox*& checkbox,
 void ocpnios_OnStartupDone();
 int ocpnios_OverlayInsetLeft();
 int ocpnios_OverlayInsetRight();
+wxColour ocpnios_PluginCardBg();
+wxColour ocpnios_PluginPageBg();
+wxString ocpnios_PluginWrap(wxWindow* win, const wxString& text, int width);
 void ocpnios_RmdFitButtons(wxWindow* dlg, int margin, wxScrolledWindow* winr,
                            wxScrolledWindow* wint, wxScrolledWindow* winw,
                            wxScrolledWindow* winl);
@@ -78,6 +82,18 @@ wxString ocpnios_TcFull(const wxString& shown);
 wxString ocpnios_TcShow(const wxString& full);
 void ocpnios_TidyDocuments();
 void ocpnios_WaitUntilActive();
+
+// Built-in plugins, statically linked (app/ios/static_plugins.cpp).
+extern "C" {
+struct ocpnios_StaticPlugin {
+  const char* file_name;
+  void* (*create)(void* manager);
+  void (*destroy)(void* plugin);
+  const char* common_name;
+};
+const ocpnios_StaticPlugin* ocpnios_StaticPlugins();
+const ocpnios_StaticPlugin* ocpnios_FindStaticPlugin(const char* file_name);
+}
 
 #endif  // __OCPN__IOS__
 
