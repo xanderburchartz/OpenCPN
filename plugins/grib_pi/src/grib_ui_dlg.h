@@ -249,6 +249,11 @@ public:
     return id > wxID_ANY && id < (int)GribOverlaySettings::GEO_ALTITUDE;
   }
   void SetScaledBitmap(double factor);
+#ifdef __OCPN__IOS__
+  /** Hides the base version to show iOS symbols instead of the bitmaps. */
+  static wxBitmap GetScaledBitmap(wxBitmap bitmap, const wxString &svgFileName,
+                                  double scale_factor);
+#endif
   void OpenFileFromJSON(wxString json);
 
   //
@@ -354,6 +359,9 @@ protected:
   /** Callback invoked when user clicks download/request forecast data. */
   void OnRequestForecastData(wxCommandEvent &event) override;
   void OnCompositeDialog(wxCommandEvent &event) override;
+#ifdef __OCPN__IOS__
+  void SetCompactLayout();
+#endif
 
   void OnTimeline(wxScrollEvent &event) override;
   void OnShowCursorData(wxCommandEvent &event) override;
