@@ -32,6 +32,11 @@
 #include "wx/wx.h"
 #endif  // precompiled headers
 
+#include <algorithm>
+#ifdef __OCPN__IOS__
+wxString ocpnios_DisplayPath(const wxString &path);  // app/ios/display_path.cpp
+#endif
+#include <vector>
 #include "chartdldr_pi.h"
 #include "wxWTranslateCatalog.h"
 #include <wx/stdpaths.h>
@@ -247,6 +252,19 @@ int chartdldr_pi::Init(void) {
     wxString s1 = st.GetNextToken();
     wxString s2 = st.GetNextToken();
     wxString s3 = st.GetNextToken();
+#ifdef __OCPN__IOS__
+    // iOS: after a reinstall or update the app gets a new container, so the
+    // saved absolute path is stale. Map the part from "/Documents/" onto the
+    // current container.
+    if (!s3.IsEmpty() && !wxDirExists(s3)) {
+      int k = s3.Find("/Documents/");
+      if (k != wxNOT_FOUND) {
+        wxString docs = wxStandardPaths::Get().GetDocumentsDir();
+        wxString moved = docs + s3.Mid(k + wxStrlen("/Documents"));
+        if (wxDirExists(moved)) s3 = moved;
+      }
+    }
+#endif
     if (!s2.IsEmpty())  // scrub empty sources.
       m_ChartSources.push_back(std::make_unique<ChartSource>(s1, s2, s3));
   }
@@ -378,6 +396,11 @@ bool chartdldr_pi::SaveConfig(void) {
     pConf->Write(_T ( "PreselectNew" ), m_preselect_new);
     pConf->Write(_T ( "PreselectUpdated" ), m_preselect_updated);
     pConf->Write(_T ( "AllowBulkUpdate" ), m_allow_bulk_update);
+#ifdef __OCPN__IOS__
+    // iOS terminates the app without a clean shutdown; without Flush a newly
+    // added chart source was lost after a restart.
+    pConf->Flush();
+#endif
 
     return true;
   } else
@@ -683,10 +706,22 @@ void ChartDldrPanelImpl::SetSource(int id) {
     FillFromFile(cs->GetUrl(), cs->GetDir(), pPlugIn->m_preselect_new,
                  pPlugIn->m_preselect_updated);
     wxURI url(cs->GetUrl());
+#ifdef __OCPN__IOS__
+    // iOS: show only the catalog name, wrapped to the width; the URL and
+    // directory ran off the right edge of the screen.
+    m_chartsLabel->SetLabel(wxString::Format(_("Charts: %s"), cs->GetName()));
+    {
+      // Use the notebook width: the page itself is not laid out yet the first
+      // time and would wrap after every word.
+      const int w = m_DLoadNB->GetClientSize().x - 24;
+      if (w > 200) m_chartsLabel->Wrap(w);
+    }
+#else
     m_chartsLabel->SetLabel(wxString::Format(
         _("Charts: %s"), (cs->GetName() + _(" from ") + url.BuildURI() +
                           _T(" -> ") + cs->GetDir())
                              .c_str()));
+#endif
     if (::wxIsBusy()) ::wxEndBusyCursor();
   } else {
     pPlugIn->m_pChartSource = NULL;
@@ -791,6 +826,9 @@ void ChartDldrPanelImpl::FillFromFile(wxString url, wxString dir, bool selnew,
     }
 
 #if !defined(CHART_LIST)  // wxDataViewListCtrl handles all of this AFAIK: Dan
+#ifdef __OCPN__IOS__
+    SyncAllChartsToggle();
+#endif
     m_scrollWinChartList->ClearBackground();
     m_scrollWinChartList->FitInside();
     m_scrollWinChartList->GetSizer()->Layout();
@@ -875,7 +913,11 @@ void ChartDldrPanelImpl::AppendCatalog(std::unique_ptr<ChartSource> &cs) {
   long id = m_lbChartSources->GetItemCount();
   m_lbChartSources->InsertItem(id, cs->GetName());
   m_lbChartSources->SetItem(id, 1, _("(Please update first)"));
+#ifdef __OCPN__IOS__
+  m_lbChartSources->SetItem(id, 2, ocpnios_DisplayPath(cs->GetDir()));
+#else
   m_lbChartSources->SetItem(id, 2, cs->GetDir());
+#endif
   wxURI url(cs->GetUrl());
   if (url.IsReference()) {
     OCPNMessageBox_PlugIn(
@@ -1047,7 +1089,11 @@ void ChartDldrPanelImpl::UpdateChartList(wxCommandEvent &event) {
             id, 1,
             pPlugIn->m_pChartCatalog.GetReleaseDate().Format(
                 _T("%Y-%m-%d %H:%M")));
+#ifdef __OCPN__IOS__
+        m_lbChartSources->SetItem(id, 2, ocpnios_DisplayPath(cs->GetDir()));
+#else
         m_lbChartSources->SetItem(id, 2, cs->GetDir());
+#endif
 
       } else
         OCPNMessageBox_PlugIn(
@@ -1291,6 +1337,21 @@ void ChartDldrPanelImpl::CheckAllCharts(bool value) {
   m_bInfoHold = false;
 #endif /* CHART_LIST */
 }
+
+#ifdef __OCPN__IOS__
+void ChartDldrPanelImpl::OnToggleAllCharts(wxCommandEvent &event) {
+  if (m_cbAllCharts) CheckAllCharts(m_cbAllCharts->GetValue());
+}
+
+// Keep the "select all" switch in sync with the list: on when all charts are
+// on.
+void ChartDldrPanelImpl::SyncAllChartsToggle() {
+  if (!m_cbAllCharts) return;
+  int n = GetChartCount();
+  m_cbAllCharts->Show(n > 1);
+  m_cbAllCharts->SetValue(n > 0 && GetCheckedChartCount() == n);
+}
+#endif
 
 void ChartDldrPanelImpl::CheckNewCharts(bool value) {
   for (int i = 0; i < GetChartCount(); i++) {
@@ -1563,6 +1624,16 @@ ChartDldrPanelImpl::ChartDldrPanelImpl(chartdldr_pi *plugin, wxWindow *parent,
     AppendCatalog(pPlugIn->m_ChartSources.at(i));
   }
   m_populated = true;
+#ifdef __OCPN__IOS__
+  // iOS: without a selected catalog the "Download Charts" tab was empty with no
+  // hint. Select the last used catalog, or else the first one.
+  if (m_lbChartSources->GetItemCount() > 0) {
+    int sel = pPlugIn->GetSourceId();
+    if (sel < 0 || sel >= m_lbChartSources->GetItemCount()) sel = 0;
+    SelectCatalog(sel);
+    SetSource(sel);  // wxQt sends no selection event on SetItemState
+  }
+#endif
 }
 
 void ChartDldrPanelImpl::OnPaint(wxPaintEvent &event) {
@@ -1639,6 +1710,11 @@ void ChartDldrPanelImpl::AddSource(wxCommandEvent &event) {
     SelectCatalog(m_lbChartSources->GetItemCount() - 1);
     pPlugIn->m_ChartSources.push_back(std::move(cs));
     pPlugIn->SaveConfig();
+    // Fetch the catalog right away instead of showing "(Please update first)"
+    // and making the user find Update. On success UpdateChartList opens the
+    // chart list.
+    wxCommandEvent update;
+    UpdateChartList(update);
   }
 #ifdef __ANDROID__
   androidEnableRotation();
@@ -2333,7 +2409,54 @@ bool ChartDldrGuiAddSourceDlg::LoadSources() {
     }
   }
   wxDELETE(doc);
+  ExpandOwnRegion(tree);
   return true;
+}
+
+// Continent of the country from the locale (nl_NL -> NL -> Europe). Only used
+// for sort order and which group is expanded; all sources stay in the list.
+static wxString RegionOfCountry(const wxString &cc) {
+  static const char *eu[] = {
+      "AD", "AL", "AT", "BA", "BE", "BG", "BY", "CH", "CY", "CZ", "DE",   "DK",
+      "EE", "ES", "FI", "FO", "FR", "GB", "GI", "GR", "HR", "HU", "IE",   "IS",
+      "IT", "LI", "LT", "LU", "LV", "MC", "MD", "ME", "MK", "MT", "NL",   "NO",
+      "PL", "PT", "RO", "RS", "SE", "SI", "SK", "SM", "UA", "VA", nullptr};
+  static const char *na[] = {"US", "CA", "MX", "BS", "BM",   "CU", "DO",
+                             "HT", "JM", "PR", "TT", "BZ",   "CR", "GT",
+                             "HN", "NI", "PA", "SV", nullptr};
+  static const char *sa[] = {"AR", "BO", "BR", "CL", "CO", "EC",   "GY",
+                             "PE", "PY", "SR", "UY", "VE", nullptr};
+  static const char *ao[] = {"AU", "NZ", "CN", "HK", "ID",   "IN",
+                             "JP", "KR", "MY", "PH", "SG",   "TH",
+                             "TW", "VN", "FJ", "PG", nullptr};
+  struct R {
+    const char **list;
+    const char *name;
+  } regions[] = {{eu, "Europe"},
+                 {na, "North America"},
+                 {sa, "South America"},
+                 {ao, "Asia and Oceania"}};
+  for (auto &r : regions)
+    for (const char **p = r.list; *p; ++p)
+      if (cc == *p) return r.name;
+  return wxEmptyString;
+}
+
+void ChartDldrGuiAddSourceDlg::ExpandOwnRegion(const wxTreeItemId &root) {
+  wxString name =
+      wxLocale::GetLanguageCanonicalName(wxLocale::GetSystemLanguage());
+  wxString cc = name.AfterFirst('_').Left(2).Upper();
+  wxString region = RegionOfCountry(cc);
+  if (region.IsEmpty()) return;
+  wxString label = wxGetTranslation(region);
+  wxTreeItemIdValue cookie;
+  for (wxTreeItemId it = m_treeCtrlPredefSrcs->GetFirstChild(root, cookie);
+       it.IsOk(); it = m_treeCtrlPredefSrcs->GetNextChild(root, cookie)) {
+    if (m_treeCtrlPredefSrcs->GetItemText(it) == label) {
+      m_treeCtrlPredefSrcs->Expand(it);
+      return;
+    }
+  }
 }
 
 bool ChartDldrGuiAddSourceDlg::LoadSections(const wxTreeItemId &root,
@@ -2354,7 +2477,9 @@ bool ChartDldrGuiAddSourceDlg::LoadSection(const wxTreeItemId &root,
        element = element.next_sibling()) {
     if (!strcmp(element.name(), "name")) {
       item = m_treeCtrlPredefSrcs->AppendItem(
-          root, wxString::FromUTF8(element.first_child().value()), 0, 0);
+          root,
+          wxGetTranslation(wxString::FromUTF8(element.first_child().value())),
+          0, 0);
 
       wxFont *pFont = OCPNGetFont(_("Dialog"));
       if (pFont) m_treeCtrlPredefSrcs->SetItemFont(item, *pFont);
@@ -2368,10 +2493,27 @@ bool ChartDldrGuiAddSourceDlg::LoadSection(const wxTreeItemId &root,
 
 bool ChartDldrGuiAddSourceDlg::LoadCatalogs(const wxTreeItemId &root,
                                             pugi::xml_node &node) {
+  // Sort by the displayed (translated) name so the list is alphabetical in
+  // every language. Sources covering a whole region ("EURIS - All ...", "All
+  // ...") go first.
+  std::vector<std::pair<wxString, pugi::xml_node>> items;
   for (pugi::xml_node element = node.first_child(); element;
        element = element.next_sibling()) {
-    if (!strcmp(element.name(), "catalog")) LoadCatalog(root, element);
+    if (strcmp(element.name(), "catalog")) continue;
+    wxString n =
+        wxString::FromUTF8(element.child("name").first_child().value());
+    items.emplace_back(n, element);
   }
+  auto key = [](const wxString &n) {
+    bool whole = n.StartsWith("EURIS") || n.StartsWith("All ");
+    return (whole ? wxString("0") : wxString("1")) +
+           wxGetTranslation(n).Lower();
+  };
+  std::stable_sort(items.begin(), items.end(),
+                   [&](const auto &a, const auto &b) {
+                     return key(a.first).CmpNoCase(key(b.first)) < 0;
+                   });
+  for (auto &it : items) LoadCatalog(root, it.second);
 
   return true;
 }
@@ -2390,8 +2532,10 @@ bool ChartDldrGuiAddSourceDlg::LoadCatalog(const wxTreeItemId &root,
     else if (!strcmp(element.name(), "dir"))
       dir = wxString::FromUTF8(element.first_child().value());
   }
-  ChartSource *cs = new ChartSource(name, location, dir);
-  wxTreeItemId id = m_treeCtrlPredefSrcs->AppendItem(root, name, 1, 1, cs);
+  // The name is shown and stored translated (the XML holds the English name).
+  ChartSource *cs = new ChartSource(wxGetTranslation(name), location, dir);
+  wxTreeItemId id =
+      m_treeCtrlPredefSrcs->AppendItem(root, wxGetTranslation(name), 1, 1, cs);
 
   wxFont *pFont = OCPNGetFont(_("Dialog"));
   if (pFont) m_treeCtrlPredefSrcs->SetItemFont(id, *pFont);
@@ -2424,7 +2568,14 @@ void ChartDldrGuiAddSourceDlg::OnSourceSelected(wxTreeEvent &event) {
 
     m_tSourceName->SetValue(cs->GetName());
     m_tChartSourceUrl->SetValue(cs->GetUrl());
+#ifdef __OCPN__IOS__
+    // iOS: always propose the directory of the selected source. Upstream only
+    // did so if the directory was still the previous proposal; after tapping
+    // "Custom" the internal app directory stayed and the charts ended up there.
+    if (true) {
+#else
     if (m_tcChartDirectory->GetValue() == m_last_path) {
+#endif
       m_tcChartDirectory->SetValue(FixPath(cs->GetDir()));
       m_panelChartDirectory->SetText(FixPath(cs->GetDir()));
 

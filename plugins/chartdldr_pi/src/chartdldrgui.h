@@ -137,6 +137,11 @@ protected:
   wxNotebook* m_DLoadNB;
   wxString m_csTitle;
   wxStaticText* m_chartsLabel;
+#ifdef __OCPN__IOS__
+  // iOS: toggle all charts at once (desktop: context menu).
+  wxCheckBox* m_cbAllCharts = nullptr;
+  virtual void OnToggleAllCharts(wxCommandEvent& event) { event.Skip(); }
+#endif
 #if !defined(CHART_LIST)  // The chart list viewer does not use m_panelArray
   std::vector<std::unique_ptr<ChartPanel>> m_panelArray;
 #endif /* CHART_LIST */

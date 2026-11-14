@@ -243,6 +243,10 @@ protected:
   int GetCheckedChartCount();
   bool isChartChecked(int i);
   void CheckAllCharts(bool value);
+#ifdef __OCPN__IOS__
+  void OnToggleAllCharts(wxCommandEvent& event) override;
+  void SyncAllChartsToggle();
+#endif
   void InvertCheckAllCharts();
 
   void CheckNewCharts(bool value);
@@ -279,6 +283,7 @@ protected:
 
   bool LoadSources();
   bool LoadSections(const wxTreeItemId& root, pugi::xml_node& node);
+  void ExpandOwnRegion(const wxTreeItemId& root);
   bool LoadSection(const wxTreeItemId& root, pugi::xml_node& node);
   bool LoadCatalogs(const wxTreeItemId& root, pugi::xml_node& node);
   bool LoadCatalog(const wxTreeItemId& root, pugi::xml_node& node);
