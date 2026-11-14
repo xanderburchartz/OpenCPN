@@ -113,6 +113,10 @@ enum {
   IDCO_ENCDATAQUALITY_CHECKBOX,
 };
 
+#ifdef __OCPN__IOS__
+class ChartCanvas;
+#endif
+
 /**
  * Represents the Canvas Options dialog. Implements a dialog that allows users
  * to configure various options for the chart canvas display.
@@ -158,6 +162,16 @@ private:
   wxCheckBox *pCBShowAIS, *pCBAttenAIS, *pCBENCVisibleSectors,
       *pCBENCDataQuality;
   bool m_bmode_change_while_hidden;  // Coming from compass icon click
+#ifdef __OCPN__IOS__
+  // iOS: toggles that were only in the menu bar, which is removed on iOS.
+  wxCheckBox *m_iosNavobjects = nullptr, *m_iosChartBar = nullptr,
+             *m_iosHideMoored = nullptr, *m_iosAISTracks = nullptr,
+             *m_iosCPADialog = nullptr, *m_iosCPASound = nullptr,
+             *m_iosCPAWarn = nullptr;
+  // iOS hooks, defined in app/ios/canvas_ios.cpp
+  void IosRefreshControlValues(ChartCanvas *parentCanvas);
+  void IosUpdateCanvasOptions(ChartCanvas *parentCanvas, bool &b_needRefresh);
+#endif
 
   DECLARE_EVENT_TABLE()
 };

@@ -40,6 +40,20 @@ static const char* const kWikiRoot =
     "https://opencpn.org/wiki/dokuwiki/doku.php";
 
 
+#ifdef __OCPN__IOS__
+// iOS: the manuals site has moved; the old paths under /opencpn-plugins/ return
+// 404. Current paths.
+static const std::unordered_map<std::string, std::string> kOnlineEntries = {
+  // iOS: index.html is only a list of manuals; go straight to the user manual.
+  {"Toc", "https://opencpn.org/wiki/dokuwiki/doku.php?id=opencpn:manual_basic"},
+  {"Chartdldr", "@ONLINE_ROOT@/chartdldr/index.html"},
+  {"Wmm", "@ONLINE_ROOT@/wmm/index.html"},
+  {"Dashboard", "@ONLINE_ROOT@/dashboard/index.html"},
+  {"Grib", "@ONLINE_ROOT@/grib/index.html"},
+  {"Hotkeys",
+    "@WIKI_ROOT@?id=opencpn:manual_basic:ui_user_interface:keyboard_shortcuts" }
+};
+#else
 static const std::unordered_map<std::string, std::string> kOnlineEntries = {
   {"Toc", "@ONLINE_ROOT@/index.html"},
   {"Chartdldr",
@@ -50,6 +64,7 @@ static const std::unordered_map<std::string, std::string> kOnlineEntries = {
   {"Hotkeys",
     "@WIKI_ROOT@?id=opencpn:manual_basic:ui_user_interface:keyboard_shortcuts" }
 };
+#endif
 
 static bool replace(std::string& str, const std::string& from,
                     const std::string& to) {
@@ -97,7 +112,13 @@ bool Manual::Launch(const std::string& entrypoint) {
   replace(path, "@ONLINE_PLUGROOT@", kOnlinePlugroot);
   replace(path, "@ONLINE_ROOT@", kOnlineRoot);
   replace(path, "@WIKI_ROOT@", kWikiRoot);
+#ifdef __OCPN__IOS__
+  // iOS: the "manual" plugin does not exist on iOS; open the online manual
+  // in Safari directly instead of showing a message about it.
+  wxLaunchDefaultBrowser(path);
+#else
   ManualDlg dlg(m_parent, path);
   dlg.ShowModal();
+#endif
   return true;
 }

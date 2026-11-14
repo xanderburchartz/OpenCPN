@@ -67,6 +67,11 @@ public:
   void SetDefaultConnectionParams();
   void SetNewMode(bool mode) { m_new_mode = mode; }
   void AddOKCancelButtons();
+#ifdef __OCPN__IOS__
+  wxStaticText* m_iosNavTitle = nullptr;  // title between Cancel and Done
+  wxString m_iosPropsLabel;
+  void IosAddNavButtons();  // app/ios/connections_ios.cpp
+#endif
 
   /** Return parameters instance populated from UI elements owned by caller */
   ConnectionParams* GetParamsFromControls();

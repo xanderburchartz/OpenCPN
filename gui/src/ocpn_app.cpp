@@ -163,6 +163,12 @@ void gdk_window_set_override_redirect(GdkWindow *window,
 #include "mark_info.h"
 #include "navutil.h"
 #include "ocpn_app.h"
+#ifdef __OCPN__IOS__
+void ocpnios_WaitUntilActive();
+void ocpnios_ShowStartupBusy();
+void ocpnios_TidyDocuments();                      // app/ios/screen_capture.mm
+void ocpnios_FloatPluginPanes(wxAuiManager *mgr);  // app/ios/frame_ios.cpp
+#endif
 #include "ocpn_aui_manager.h"
 #include "ocpn_frame.h"
 #include "ocpn_platform.h"
@@ -812,11 +818,22 @@ bool MyApp::OnInit() {
     wxLogFatalError(getenv("OPENCPN_FATAL_ERROR"));
   }
 
+#ifdef __OCPN__IOS__
+  // iOS: create no windows before iOS reports the app active, otherwise the
+  // window's GL layer fails and stays black (app/ios/app_active.cpp).
+  ocpnios_WaitUntilActive();
+#endif
+
 #ifndef __ANDROID__
   // Check if last run failed, set up safe_mode.
   if (!safe_mode::GetMode()) {
     safe_mode::CheckLastStart();
   }
+#endif
+#ifdef __OCPN__IOS__
+  // iOS: busy indicator until startup is done (app/ios/startup_busy.mm).
+  ocpnios_ShowStartupBusy();
+  ocpnios_TidyDocuments();
 #endif
 
   //  Perform first stage initialization
@@ -927,7 +944,8 @@ bool MyApp::OnInit() {
   //    Initialize embedded PNG icon graphics
   ::wxInitAllImageHandlers();
 
-#ifdef __WXQT__
+#if defined(__WXQT__) && \
+    !defined(__OCPN__IOS__)  // iOS: Android-only function (androidUTIL)
   //  Now we can configure the Qt StyleSheets, if present
   prepareAndroidStyleSheets();
 #endif
@@ -1141,7 +1159,8 @@ bool MyApp::OnInit() {
   wxLogMessage("wxLocale support not available");
 #endif
 
-#ifndef __ANDROID__
+#if !defined(__ANDROID__) && \
+    !defined(__OCPN__IOS__)  // iOS: no wizard, like Android
   //  Now that locale is established, possibly run the startup wizard.
   if (g_config_wizard || b_initial_load) {
     FirstUseWizImpl wiz(gFrame, pConfig);
@@ -1511,6 +1530,10 @@ void MyApp::BuildMainFrame() {
   gFrame->SetAllToolbarScale();
   gFrame->SetAndApplyColorScheme(global_color_scheme);
   if (g_bframemax) gFrame->Maximize(true);
+#ifdef __OCPN__IOS__
+  // iOS: there is no window manager; the main window always fills the screen.
+  gFrame->Maximize(true);
+#endif
 
 #ifdef __ANDROID__
   if (g_bresponsive && (gFrame->GetPrimaryCanvas()->GetPixPerMM() > 4.0))
@@ -1626,9 +1649,12 @@ void MyApp::BuildMainFrame() {
   }
 
   if (!bno_load) g_pauimgr->LoadPerspective(perspective, false);
+#ifdef __OCPN__IOS__
+  ocpnios_FloatPluginPanes(g_pauimgr);
+#endif
 
-    // Touch up the AUI manager
-    //  Make sure that any pane width is reasonable default value
+  // Touch up the AUI manager
+  //  Make sure that any pane width is reasonable default value
 #if 0  // TODO nees this?
   for (unsigned int i = 0; i < g_canvasArray.GetCount(); i++) {
     ChartCanvas *cc = g_canvasArray.Item(i);

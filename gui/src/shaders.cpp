@@ -26,7 +26,9 @@
 #if defined(USE_ANDROID_GLES2) || defined(ocpnUSE_GLSL)
 
 #ifdef USE_ANDROID_GLES2
+#ifndef __OCPN__IOS__  // iOS: GLES2 via qopengl.h (dychart.h)
 #include <GLES2/gl2.h>
+#endif
 #include "qdebug.h"
 #endif
 

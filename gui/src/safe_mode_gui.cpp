@@ -37,6 +37,11 @@
 
 #include "model/safe_mode.h"
 
+#ifdef __OCPN__IOS__
+#include <QVariant>
+#include <QWidget>
+#endif
+
 // clang-format off
 static const char* const kLastRunErrorMsg1 =
     // clang-format off
@@ -146,6 +151,11 @@ void CheckLastStart() {
   std::string path = CheckFilePath();
   if (fs::exists(path)) {
     SafeModeDialog dlg(nullptr, 15);
+#ifdef __OCPN__IOS__
+    // iOS: as an alert with its own buttons ("Safe restart" / "Normal start"),
+    // not as a sheet: there "Done" chose safe mode, which nobody expects.
+    if (dlg.GetHandle()) dlg.GetHandle()->setProperty("ocpnios_alert", true);
+#endif
     int result = dlg.ShowModal();
     dlg.StopTimer();
     safe_mode = result != wxID_CANCEL;

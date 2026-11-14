@@ -67,6 +67,10 @@ protected:
   }
 
   void RecalculateSize(void);
+#ifdef __OCPN__IOS__
+  void IosPhoneLayout();   // iOS: app/ios/dialogs_ios.cpp
+  void IosLaunchManual();  // iOS: app/ios/dialogs_ios.cpp
+#endif
 
 public:
   ~AboutFrameImpl() {};

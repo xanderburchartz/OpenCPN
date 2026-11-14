@@ -26,6 +26,7 @@
 #include "qdebug.h"
 #endif
 
+#include <functional>
 #include <wx/filename.h>
 #include <wx/dir.h>
 
@@ -236,6 +237,20 @@ std::string SVGBitmapCache::MakeKey(wxString file_path, const int width,
   std::replace(file_path.begin(), file_path.end(), '*', '_');
 
   std::ostringstream ss;
+#ifdef __OCPN__IOS__
+  // iOS: the full path as file name is longer than 255 chars in the iOS
+  // container ("File name too long"), so these icons were never cached. For a
+  // long path use a hash plus the last part of the name.
+  {
+    std::string fp = file_path.ToStdString();
+    if (fp.size() > 160) {
+      std::ostringstream h;
+      h << std::hex << std::hash<std::string>{}(fp) << "_"
+        << fp.substr(fp.size() - 100);
+      file_path = h.str();
+    }
+  }
+#endif
   ss << file_path << "_" << width << "x" << height;
   return ss.str();
 }

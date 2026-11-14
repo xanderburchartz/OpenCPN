@@ -652,7 +652,8 @@ bool ChartMbTiles::GetTileTexture(SharedTilePtr tile) {
   } else {
     // The tile has been decompressed to memory : load it into OpenGL texture
     // memory
-#ifndef __ANDROID__
+#if !defined(__ANDROID__) && \
+    !defined(__OCPN__IOS__)  // iOS: not available in GLES
     glEnable(GL_COLOR_MATERIAL);
 #endif
     glGenTextures(1, &tile->m_gl_texture_name);
