@@ -243,6 +243,10 @@ protected:
   int GetCheckedChartCount();
   bool isChartChecked(int i);
   void CheckAllCharts(bool value);
+#ifdef __OCPN__IOS__
+  void OnToggleAllCharts(wxCommandEvent& event) override;
+  void SyncAllChartsToggle();
+#endif
   void InvertCheckAllCharts();
 
   void CheckNewCharts(bool value);
