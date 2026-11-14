@@ -293,6 +293,10 @@ private:
   std::vector<std::string> m_deferred_messages;
 };
 
+#ifdef __OCPN__IOS__
+#include "model/ios_hooks.h"
+#endif
+
 class PanelHardBreakWrapper : public wxTextWrapper {
 public:
   PanelHardBreakWrapper(wxWindow* win, const wxString& text, int widthMax) {
@@ -2850,6 +2854,12 @@ PluginPanel::PluginPanel(wxPanel* parent, wxWindowID id, const wxPoint& pos,
   m_bSelected = false;
   m_penWidthUnselected = g_Platform->GetDisplayDPmm() * .25;
   m_penWidthSelected = g_Platform->GetDisplayDPmm() * .5;
+#ifdef __OCPN__IOS__
+  // iOS: no thick black border around the selected plugin; iOS only uses a
+  // light background.
+  m_penWidthUnselected = 1;
+  m_penWidthSelected = 1;
+#endif
 
   wxBoxSizer* topSizer = new wxBoxSizer(wxVERTICAL);
   SetSizer(topSizer);
@@ -2897,7 +2907,50 @@ PluginPanel::PluginPanel(wxPanel* parent, wxWindowID id, const wxPoint& pos,
   bool bCompact = false;
   if (nChars < 60)  // Arbitrary, detecting mobile devices in portrait mode.
     bCompact = true;
+#ifdef __OCPN__IOS__
+  // iOS: use the iOS row in landscape too; otherwise rotating brought back the
+  // desktop layout ("Enabled", switch in the middle of the row).
+  bCompact = true;
+#endif
 
+#ifdef __OCPN__IOS__
+  // iOS: row like an iOS list. Line 1: name (bold) and version, the switch on
+  // the right without text; the description below. Previously the version was
+  // on its own line and the switch with "Enabled" in the middle.
+  wxBoxSizer* line1 = new wxBoxSizer(wxHORIZONTAL);
+  itemBoxSizer02->Add(line1, 0, wxEXPAND | wxTOP, 6);
+  m_pName = new wxStaticText(this, wxID_ANY, "");
+  wxFont nameFont = m_pName->GetFont();
+  nameFont.SetWeight(wxFONTWEIGHT_BOLD);
+  m_pName->SetFont(nameFont);
+  m_pName->SetLabel(
+      ocpnios_PluginWrap(m_pName, m_plugin.m_common_name,
+                         g_Platform->getDisplaySize().x * 45 / 100));
+  m_pName->Bind(wxEVT_LEFT_DOWN, &PluginPanel::OnPluginSelected, this);
+  m_pName->Bind(wxEVT_LEFT_UP, &PluginPanel::OnPluginSelectedUp, this);
+  line1->Add(m_pName, 0, wxALIGN_CENTER_VERTICAL | wxLEFT | wxRIGHT, 5);
+
+  m_pVersion = new wxStaticText(this, wxID_ANY, _T("X.YY.ZZ.AA"));
+  m_pVersion->SetForegroundColour(wxColour(128, 128, 128));
+  line1->Add(m_pVersion, 0, wxALIGN_CENTER_VERTICAL);
+  if (m_plugin.m_status == PluginStatus::ManagedInstallAvailable)
+    m_pVersion->Hide();
+  m_pVersion->Bind(wxEVT_LEFT_DOWN, &PluginPanel::OnPluginSelected, this);
+  m_pVersion->Bind(wxEVT_LEFT_UP, &PluginPanel::OnPluginSelectedUp, this);
+
+  line1->AddStretchSpacer(1);
+  m_cbEnable = new wxCheckBox(this, wxID_ANY, "");
+  line1->Add(m_cbEnable, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
+  m_cbEnable->Bind(wxEVT_CHECKBOX, &PluginPanel::OnPluginEnableToggle, this);
+
+  m_pDescription = new wxStaticText(this, wxID_ANY, "");
+  m_pDescription->SetLabel(
+      ocpnios_PluginWrap(m_pDescription, m_plugin.m_short_description,
+                         g_Platform->getDisplaySize().x * 6 / 10));
+  itemBoxSizer02->Add(m_pDescription, 0, wxEXPAND | wxALL, 5);
+  m_pDescription->Bind(wxEVT_LEFT_DOWN, &PluginPanel::OnPluginSelected, this);
+  m_pDescription->Bind(wxEVT_LEFT_UP, &PluginPanel::OnPluginSelectedUp, this);
+#else
   if (bCompact) {
     // Might need to shorten the Plugin name string
     wxString nameString = m_plugin.m_common_name;
@@ -2992,6 +3045,7 @@ PluginPanel::PluginPanel(wxPanel* parent, wxWindowID id, const wxPoint& pos,
     m_pDescription->Bind(wxEVT_LEFT_UP, &PluginPanel::OnPluginSelectedUp, this);
   }
 
+#endif
   if (!bCompact) {
     m_info_btn = new WebsiteButton(this, "https:\\opencpn.org");
     m_info_btn->Hide();
@@ -3071,7 +3125,13 @@ PluginPanel::PluginPanel(wxPanel* parent, wxWindowID id, const wxPoint& pos,
   m_itemStatusIconBitmap->Bind(wxEVT_LEFT_UP, &PluginPanel::OnPluginSelectedUp,
                                this);
 
+#ifdef __OCPN__IOS__
+  // iOS: the status icon (managed/side-loaded/update) means nothing on iOS: all
+  // plugins are built into the app. It was also off the right edge.
+  m_itemStatusIconBitmap->Hide();
+#else
   itemBoxSizer01->Add(m_itemStatusIconBitmap, 0, wxEXPAND | wxALL, 20);
+#endif
 
   itemBoxSizer02->AddSpacer(GetCharWidth());
 
@@ -3118,7 +3178,9 @@ static wxStopWatch swclick;
 static int downx, downy;
 
 void PluginPanel::OnPluginSelected(wxMouseEvent& event) {
-#ifdef __ANDROID__
+#if defined(__ANDROID__) || defined(__OCPN__IOS__)
+  // iOS: as on Android, select only on release of a short tap; otherwise a
+  // swipe to scroll opened the plugin where it started.
   swclick.Start();
   event.GetPosition(&downx, &downy);
 #else
@@ -3127,9 +3189,13 @@ void PluginPanel::OnPluginSelected(wxMouseEvent& event) {
 }
 
 void PluginPanel::OnPluginSelectedUp(wxMouseEvent& event) {
-#ifdef __ANDROID__
+#if defined(__ANDROID__) || defined(__OCPN__IOS__)
+#ifdef __OCPN__IOS__
+  if (swclick.Time() < 600) {
+#else
   qDebug() << swclick.Time();
   if (swclick.Time() < 200) {
+#endif
     int upx, upy;
     event.GetPosition(&upx, &upy);
     if ((fabs(upx - downx) < GetCharWidth()) &&
@@ -3262,6 +3328,16 @@ void PluginPanel::SetSelected(bool selected) {
         break;
     }
     SetActionLabel(label);
+#ifdef __OCPN__IOS__
+    // iOS: plugins are built into the app; install, update and remove are not
+    // possible (iOS does not allow downloaded code).
+    m_pButtonAction->Hide();
+    m_pButtonUninstall->Hide();
+    // m_pButtons->Show(true) also shows the Website button, with the default
+    // link "https:\\opencpn.org" (backslashes; Safari opened a blank page).
+    // Only show it with a real link from the plugin.
+    if (m_plugin.m_managed_metadata.info_url.empty()) m_info_btn->Hide();
+#endif
     Layout();
   } else {
     SetBackgroundColour(GetDialogColor(DLG_UNSELECTED_BACKGROUND));
@@ -3297,6 +3373,9 @@ void PluginPanel::SetSelected(bool selected) {
   } else {
     SetBackgroundColour(GetDialogColor(DLG_UNSELECTED_BACKGROUND));
   }
+#ifdef __OCPN__IOS__
+  SetBackgroundColour(ocpnios_PluginPageBg());  // iOS: cards on the page colour
+#endif
 
   SetEnabled(m_plugin.m_enabled);
 
@@ -3326,6 +3405,13 @@ void PluginPanel::OnPaint(wxPaintEvent& event) {
     border = GetDialogColor(DLG_SELECTED_ACCENT);
   }
 
+#ifdef __OCPN__IOS__
+  color = ocpnios_PluginCardBg();
+  dc.SetBrush(wxBrush(color, wxBRUSHSTYLE_SOLID));
+  dc.SetPen(*wxTRANSPARENT_PEN);
+  dc.DrawRoundedRectangle(5, 5, GetSize().x - 10, GetSize().y - 10, 10);
+  return;
+#endif
   wxBrush b(color, wxBRUSHSTYLE_SOLID);
   dc.SetBrush(b);
   dc.SetPen(wxPen(border, penWidth));
@@ -3422,10 +3508,19 @@ void PluginPanel::SetEnabled(bool enabled) {
     wxString description = m_plugin.m_long_description;
     if (description.IsEmpty())
       description = wxString(m_plugin.m_managed_metadata.description.c_str());
+#ifdef __OCPN__IOS__
+    // iOS: without a long description (Tactics) the row stayed empty.
+    if (description.IsEmpty()) description = m_plugin.m_short_description;
+#endif
 
+#ifdef __OCPN__IOS__
+    m_pDescription->SetLabel(ocpnios_PluginWrap(
+        m_pDescription, description, g_Platform->getDisplaySize().x * 6 / 10));
+#else
     PanelHardBreakWrapper wrapper(this, description,
                                   g_options->GetSize().x * 7 / 10);
     m_pDescription->SetLabel(wrapper.GetWrapped());
+#endif
     if (m_plugin.m_managed_metadata.info_url.size()) {
       m_info_btn->SetURL(m_plugin.m_managed_metadata.info_url.c_str());
       m_info_btn->Show();
@@ -3434,13 +3529,34 @@ void PluginPanel::SetEnabled(bool enabled) {
     wxString description = m_plugin.m_short_description;
     if (description.IsEmpty())
       description = wxString(m_plugin.m_managed_metadata.summary.c_str());
+#ifdef __OCPN__IOS__
+    m_pDescription->SetLabel(ocpnios_PluginWrap(
+        m_pDescription, description, g_Platform->getDisplaySize().x * 6 / 10));
+#else
     PanelHardBreakWrapper wrapper(this, description,
                                   g_options->GetSize().x * 7 / 10);
     m_pDescription->SetLabel(wrapper.GetWrapped());
+#endif
   }
+#ifdef __OCPN__IOS__
+  // Pass the new height after wrapping to the list.
+  m_pDescription->InvalidateBestSize();
+  Layout();
+  if (GetParent()) GetParent()->Layout();
+#endif
 
   m_pButtonPreferences->Enable(enabled &&
                                (m_plugin.m_cap_flag & WANTS_PREFERENCES));
+#ifdef __OCPN__IOS__
+  // iOS: no grey button that does nothing (pypilot has no preferences); hide it
+  // as in an iOS list. Show it again when the plugin is enabled while selected.
+  const bool want = m_pButtonPreferences->IsEnabled() && m_bSelected;
+  if (want != m_pButtonPreferences->IsShown()) {
+    m_pButtonPreferences->Show(want);
+    Layout();
+    if (GetParent()) GetParent()->Layout();
+  }
+#endif
   m_cbEnable->SetValue(enabled);
 }
 
