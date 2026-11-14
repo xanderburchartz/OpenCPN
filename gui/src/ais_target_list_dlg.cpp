@@ -364,6 +364,13 @@ AISTargetListDialog::AISTargetListDialog(wxWindow *parent, wxAuiManager *auimgr,
     }
 
     pane = m_pAuiManager->GetPane("AISTargetList");  // Refresh the reference
+#ifdef __OCPN__IOS__
+    // iOS: the saved layout holds the caption in the language used back then
+    // ("AIS target list"); always use the current translation.
+    pane.Caption(_("AIS target list"));
+    if (pane.frame) pane.frame->SetTitle(pane.caption);
+    m_pAuiManager->Update();
+#endif
 
     //  Some special setup for touch screens
     if (g_btouch) {
@@ -484,7 +491,14 @@ void AISTargetListDialog::RecalculateSize() {
 }
 
 void AISTargetListDialog::CreateControls() {
+#ifdef __OCPN__IOS__
+  // iOS: on a phone put the list above the buttons; side by side the list got
+  // half the width and the buttons fell off the right edge.
+  wxBoxSizer *topSizer =
+      new wxBoxSizer(wxGetDisplaySize().x < 700 ? wxVERTICAL : wxHORIZONTAL);
+#else
   wxBoxSizer *topSizer = new wxBoxSizer(wxHORIZONTAL);
+#endif
   SetSizer(topSizer);
 #ifdef __ANDROID__
   this->GetHandle()->setStyleSheet(getQtStyleSheet());
@@ -678,8 +692,16 @@ void AISTargetListDialog::CreateControls() {
   topSizer->Add(m_pListCtrlAISTargets, 1, wxEXPAND | wxALL, 0);
 
   wxBoxSizer *boxSizer02 = new wxBoxSizer(wxVERTICAL);
-  boxSizer02->AddSpacer(22);
-  topSizer->Add(boxSizer02, 0, wxEXPAND | wxALL, 2);
+#ifdef __OCPN__IOS__
+  // Stacked: buttons get the same height as the list (and scroll).
+  if (topSizer->GetOrientation() == wxVERTICAL) {
+    topSizer->Add(boxSizer02, 1, wxEXPAND | wxALL, 2);
+  } else
+#endif
+  {
+    boxSizer02->AddSpacer(22);
+    topSizer->Add(boxSizer02, 0, wxEXPAND | wxALL, 2);
+  }
 
   wxScrolledWindow *winr =
       new wxScrolledWindow(this, wxID_ANY, wxDefaultPosition, wxDefaultSize,

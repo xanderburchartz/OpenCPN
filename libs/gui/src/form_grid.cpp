@@ -20,9 +20,20 @@
 #include "form_grid.h"
 #include "ui_utils.h"
 
+#ifdef __OCPN__IOS__
+// iOS: on a phone put the label above the field (one column). With label and
+// field side by side a form was wider than an iPhone and the fields fell off
+// the right edge (e.g. mark properties).
+FormGrid::FormGrid(wxWindow* parent)
+    : wxFlexGridSizer(1, GUI::GetSpacing(parent, 1),
+                      GUI::GetSpacing(parent, 2)) {
+  AddGrowableCol(0, 0);
+}
+#else
 FormGrid::FormGrid(wxWindow* parent)
     : wxFlexGridSizer(2, GUI::GetSpacing(parent, 1),
                       GUI::GetSpacing(parent, 2)) {
   AddGrowableCol(0, 0);
   AddGrowableCol(1, 0);
 }
+#endif

@@ -77,6 +77,11 @@ void BaseDialog::SetInitialSize() {
   wxDialog::SetInitialSize(size);
 }
 
+#ifdef __OCPN__IOS__
+#include <QRect>
+QRect ocpnios_AppWindowRect();  // app/ios/app_window.mm
+#endif
+
 void BaseDialog::AddHtmlContent(const std::stringstream& html) {
   std::string html_str = html.str();
 
@@ -98,6 +103,23 @@ void BaseDialog::AddHtmlContent(const std::stringstream& html) {
   html_window->SetBorders(0);
   html_window->GetVirtualSize(&html_width, &html_height);
   html_width += GUI::GetSpacing(this, kDialogPadding * 2);  // prevent scrollbar
+#ifdef __OCPN__IOS__
+  // iOS: the height is measured while the window is still narrow and came out
+  // taller than the screen on iPad; the buttons (Agree/Cancel of the welcome
+  // dialog) were then off screen. Use at most half the screen; longer text
+  // scrolls in the text box.
+  {
+    wxRect scr = wxDisplay(this).GetClientArea();
+    // Windowed mode (iPadOS 26): the app's own window, not the whole screen;
+    // otherwise the buttons ("Normal start") fell below the window.
+    const QRect app = ocpnios_AppWindowRect();
+    if (app.isValid()) scr = wxRect(app.x(), app.y(), app.width(), app.height());
+    // At most 60%: the buttons are in the sheet title bar (window_fit.cpp); with a
+    // third, half the screen stayed empty and the text had to be scrolled.
+    html_height = std::min(html_height, std::max(120, scr.height * 6 / 10));
+    html_width = std::min(html_width, scr.width - 40);
+  }
+#endif
   html_window->SetMinSize(
       wxSize(html_width, html_height));  // Fit() needs this size!
   html_window->SetBackgroundColour(GetBackgroundColour());
