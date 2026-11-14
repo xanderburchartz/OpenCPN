@@ -6962,19 +6962,19 @@ void ChartCanvas::AlertDraw(ocpnDC &dc) {
 void ChartCanvas::UpdateShips() {
   //  Get the rectangle in the current dc which bounds the "ownship" symbol
 
-  wxClientDC dc(this);
-  // Sometimes during startup the dc x or y size is zero, which causes the
-  // bitmap creation to fail. Just skip the update in this case.
-  if (!dc.IsOk() || dc.GetSize().x < 1 || dc.GetSize().y < 1) return;
+  // Only the window size is needed. GetClientSize gives the same size without
+  // a wxClientDC outside a paint event (which crashes under wxQt).
+  wxSize dc_size = GetClientSize();
+  if (dc_size.x <= 0 || dc_size.y <= 0) return;
 
-  wxBitmap test_bitmap(dc.GetSize().x, dc.GetSize().y);
+  wxBitmap test_bitmap(dc_size.x, dc_size.y);
   if (!test_bitmap.IsOk()) return;
 
   wxMemoryDC temp_dc(test_bitmap);
 
   temp_dc.ResetBoundingBox();
   temp_dc.DestroyClippingRegion();
-  temp_dc.SetClippingRegion(0, 0, dc.GetSize().x, dc.GetSize().y);
+  temp_dc.SetClippingRegion(0, 0, dc_size.x, dc_size.y);
 
   // Draw the ownship on the temp_dc
   ocpnDC ocpndc = ocpnDC(temp_dc);
@@ -7013,12 +7013,10 @@ void ChartCanvas::UpdateAlerts() {
   //  Get the rectangle in the current dc which bounds the detected Alert
   //  targets
 
-  //  Use this dc
-  wxClientDC dc(this);
-
-  // Get dc boundary
+  // No wxClientDC (crashes under wxQt outside paint events); only the size
+  // is needed.
   int sx, sy;
-  dc.GetSize(&sx, &sy);
+  GetClientSize(&sx, &sy);
 
   //  Need a bitmap
   wxBitmap test_bitmap(sx, sy, -1);
@@ -7064,12 +7062,10 @@ void ChartCanvas::UpdateAIS() {
 
   //  Get the rectangle in the current dc which bounds the detected AIS targets
 
-  //  Use this dc
-  wxClientDC dc(this);
-
-  // Get dc boundary
+  // No wxClientDC (crashes under wxQt outside paint events); only the size
+  // is needed.
   int sx, sy;
-  dc.GetSize(&sx, &sy);
+  GetClientSize(&sx, &sy);
 
   wxRect ais_rect;
 
