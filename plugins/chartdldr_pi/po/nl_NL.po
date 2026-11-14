@@ -91,7 +91,7 @@ msgstr "Kaart: %s"
 
 #: src/chartdldr_pi.cpp:687
 msgid " from "
-msgstr " vanaf"
+msgstr " van "
 
 #: src/chartdldr_pi.cpp:693 src/chartdldrgui.cpp:504
 msgid "Charts"
@@ -473,3 +473,139 @@ msgstr "Nieuwe kaartbron"
 #: src/chartdldrgui.h:227
 msgid "Chart Downloader Preferences"
 msgstr "Voorkeuren Kaart Downloader"
+
+#: data/chart_sources.xml
+msgid "Europe"
+msgstr "Europa"
+
+#: data/chart_sources.xml
+msgid "North America"
+msgstr "Noord-Amerika"
+
+#: data/chart_sources.xml
+msgid "South America"
+msgstr "Zuid-Amerika"
+
+#: data/chart_sources.xml
+msgid "Asia and Oceania"
+msgstr "Azië en Oceanië"
+
+#: data/chart_sources.xml
+msgid "World and basemaps"
+msgstr "Wereld en basiskaarten"
+
+#: data/chart_sources.xml
+msgid "GEBCO bathymetry"
+msgstr "GEBCO-dieptekaart"
+
+#: data/chart_sources.xml
+msgid "EURIS - All European waterways Inland ENC Charts"
+msgstr "EURIS - alle Europese binnenwateren (binnenvaart-ENC)"
+
+#: data/chart_sources.xml
+msgid "Austria Inland ENC Charts"
+msgstr "Oostenrijk - binnenvaart-ENC"
+
+#: data/chart_sources.xml
+msgid "Belgium OSM Raster Charts"
+msgstr "België - OSM-rasterkaarten"
+
+#: data/chart_sources.xml
+msgid "Bulgaria Inland ENC Charts"
+msgstr "Bulgarije - binnenvaart-ENC"
+
+#: data/chart_sources.xml
+msgid "Croatia Inland ENC Charts"
+msgstr "Kroatië - binnenvaart-ENC"
+
+#: data/chart_sources.xml
+msgid "Czech Republic Inland ENC Charts"
+msgstr "Tsjechië - binnenvaart-ENC"
+
+#: data/chart_sources.xml
+msgid "France Inland ENC Charts"
+msgstr "Frankrijk - binnenvaart-ENC"
+
+#: data/chart_sources.xml
+msgid "France Inland ENC Charts for Rhone"
+msgstr "Frankrijk - binnenvaart-ENC Rhône"
+
+#: data/chart_sources.xml
+msgid "Germany Inland ENC Charts"
+msgstr "Duitsland - binnenvaart-ENC"
+
+#: data/chart_sources.xml
+msgid "Germany OSM Raster Charts"
+msgstr "Duitsland - OSM-rasterkaarten"
+
+#: data/chart_sources.xml
+msgid "Hungary Inland ENC Charts"
+msgstr "Hongarije - binnenvaart-ENC"
+
+#: data/chart_sources.xml
+msgid "Netherlands Inland ENC Charts"
+msgstr "Nederland - binnenvaart-ENC (incl. Waddenzee en Zeeland)"
+
+#: data/chart_sources.xml
+msgid "Netherlands OSM Raster Charts"
+msgstr "Nederland - OSM-rasterkaarten"
+
+#: data/chart_sources.xml
+msgid "Poland Inland ENC Charts"
+msgstr "Polen - binnenvaart-ENC"
+
+#: data/chart_sources.xml
+msgid "Romania Inland ENC Charts"
+msgstr "Roemenië - binnenvaart-ENC"
+
+#: data/chart_sources.xml
+msgid "Serbia Inland ENC Charts"
+msgstr "Servië - binnenvaart-ENC"
+
+#: data/chart_sources.xml
+msgid "Slovakia Inland ENC Charts"
+msgstr "Slowakije - binnenvaart-ENC"
+
+#: data/chart_sources.xml
+msgid "Switzerland Inland ENC Charts"
+msgstr "Zwitserland - binnenvaart-ENC"
+
+#: data/chart_sources.xml
+msgid "Argentina RNC Nautical Charts"
+msgstr "Argentinië - rasterzeekaarten"
+
+#: data/chart_sources.xml
+msgid "Brasil Inland ENC Charts"
+msgstr "Brazilië - binnenvaart-ENC"
+
+#: data/chart_sources.xml
+msgid "Brasil RNC Nautical Charts"
+msgstr "Brazilië - rasterzeekaarten"
+
+#: data/chart_sources.xml
+msgid "Peru RNC Nautical Charts"
+msgstr "Peru - rasterzeekaarten"
+
+#: data/chart_sources.xml
+msgid "New Zealand RNC Nautical Charts"
+msgstr "Nieuw-Zeeland - rasterzeekaarten"
+
+#: data/chart_sources.xml
+msgid "South China Sea ENC Charts"
+msgstr "Zuid-Chinese Zee - ENC"
+
+#: data/chart_sources.xml
+msgid "GSHHG basemap"
+msgstr "GSHHG-basiskaart"
+
+#: data/chart_sources.xml
+msgid "OSM basemap"
+msgstr "OSM-basiskaart"
+
+#: data/chart_sources.xml
+msgid "US Pilot Charts"
+msgstr "Pilot charts (VS)"
+
+#: data/chart_sources.xml
+msgid "USA - NOAA & Inland charts"
+msgstr "VS - NOAA en binnenwateren"

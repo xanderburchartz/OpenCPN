@@ -3472,11 +3472,11 @@ msgstr "Zet koers uit naar hier"
 
 #: gui/src/canvas_menu.cpp:496 gui/src/ocpn_frame.cpp:3592
 msgid "Course Up Mode"
-msgstr "Koers-Boven presentatie"
+msgstr "Koers-Boven"
 
 #: gui/src/canvas_menu.cpp:498
 msgid "Heading Up Mode"
-msgstr "Koers-Boven modus"
+msgstr "Kop-Boven"
 
 #: gui/src/canvas_menu.cpp:500 gui/src/canvas_menu.cpp:507
 #: gui/src/ocpn_frame.cpp:3307 gui/src/ocpn_frame.cpp:3591
@@ -3778,7 +3778,7 @@ msgstr "Koers-Boven"
 
 #: gui/src/canvas_options.cpp:156 gui/src/compass.cpp:250
 msgid "Heading Up"
-msgstr "Koers-Boven"
+msgstr "Kop-Boven"
 
 #: gui/src/canvas_options.cpp:165 gui/src/options.cpp:4015
 #: gui/src/options.cpp:4206
@@ -3787,7 +3787,7 @@ msgstr "Kijk-Vooruit presentatie"
 
 #: gui/src/canvas_options.cpp:176 gui/src/options.cpp:1893
 msgid "Display Options"
-msgstr "Weergaveopties Eigen Schip"
+msgstr "Weergaveopties"
 
 #: gui/src/canvas_options.cpp:181 gui/src/ocpn_frame.cpp:3616
 #: gui/src/ocpn_frame.cpp:3621 gui/src/options.cpp:4030 gui/src/options.cpp:4221
@@ -4513,7 +4513,7 @@ msgstr "Deze template toepassen om terug te keren naar een bekende veilige confi
 #: gui/src/connection_edit.cpp:295 gui/src/connection_edit.cpp:813
 #: gui/src/connections_dlg.cpp:1179 gui/src/connections_dlg.cpp:1203
 msgid "Edit Selected Connection"
-msgstr "Wijzig geselecteerde verbinding"
+msgstr "Verbinding wijzigen"
 
 #: gui/src/connection_edit.cpp:329 gui/src/conn_params_panel.cpp:428
 msgid "Built-in GPS"
@@ -4646,7 +4646,7 @@ msgstr "als autopilot of NMEA repeater"
 
 #: gui/src/connection_edit.cpp:628
 msgid "Advanced: "
-msgstr ""
+msgstr "Uitgebreid: "
 
 #: gui/src/connection_edit.cpp:636
 msgid "Auth Token"
@@ -4658,7 +4658,7 @@ msgstr "Gebruik Garmin (GRMN) modus voor invoer"
 
 #: gui/src/connection_edit.cpp:661
 msgid " UDP Multicast"
-msgstr ""
+msgstr " UDP-multicast"
 
 #: gui/src/connection_edit.cpp:669
 msgid "APB bearing precision"
@@ -4734,23 +4734,23 @@ msgstr "Signal K server niet gevonden."
 
 #: gui/src/connection_edit.cpp:1727
 msgid "There is an enabled UDP input connection that uses the same data port."
-msgstr ""
+msgstr "Er is een ingeschakelde UDP-invoerverbinding die dezelfde datapoort gebruikt."
 
 #: gui/src/connection_edit.cpp:1730
 msgid "Please apply a filter on both connections to avoid a feedback loop."
-msgstr ""
+msgstr "Zet een filter op beide verbindingen om een terugkoppellus te voorkomen."
 
 #: gui/src/connection_edit.cpp:1735
 msgid "There is a disabled UDP Input connection that uses the same Dataport."
-msgstr ""
+msgstr "Er is een uitgeschakelde UDP-invoerverbinding die dezelfde datapoort gebruikt."
 
 #: gui/src/connection_edit.cpp:1738
 msgid "If you enable that input please apply a filter on both connections to avoid a  feedback loop."
-msgstr ""
+msgstr "Schakel je die invoer in, zet dan een filter op beide verbindingen om een terugkoppellus te voorkomen."
 
 #: gui/src/connection_edit.cpp:1742
 msgid "Or consider using a different data port for one of them"
-msgstr ""
+msgstr "Of gebruik voor een van beide een andere datapoort"
 
 #: gui/src/connection_edit.cpp:1744 gui/src/options.cpp:8221
 #: gui/src/routeman_gui.cpp:63
@@ -4836,23 +4836,23 @@ msgstr "Nieuwe verbinding toevoegen..."
 
 #: gui/src/connections_dlg.cpp:403
 msgid "Status"
-msgstr ""
+msgstr "Status"
 
 #: gui/src/connections_dlg.cpp:483 gui/src/connections_dlg.cpp:754
 msgid "Enabled, click to disable"
-msgstr ""
+msgstr "Ingeschakeld, tik om uit te schakelen"
 
 #: gui/src/connections_dlg.cpp:485 gui/src/connections_dlg.cpp:756
 msgid "Disabled, click to enable"
-msgstr ""
+msgstr "Uitgeschakeld, tik om in te schakelen"
 
 #: gui/src/connections_dlg.cpp:492
 msgid "Edit connection"
-msgstr ""
+msgstr "Verbinding bewerken"
 
 #: gui/src/connections_dlg.cpp:494
 msgid "Delete connection"
-msgstr ""
+msgstr "Verbinding verwijderen"
 
 #: gui/src/connections_dlg.cpp:680 gui/src/pluginmanager.cpp:2222
 msgid "Disabled"
@@ -4864,23 +4864,23 @@ msgstr "Geen driver gegevens beschikbaar"
 
 #: gui/src/connections_dlg.cpp:696
 msgid "No data flowing through connection"
-msgstr ""
+msgstr "Er komen geen gegevens binnen via deze verbinding"
 
 #: gui/src/connections_dlg.cpp:704
 msgid "The device is unavailable"
-msgstr ""
+msgstr "Het apparaat is niet beschikbaar"
 
 #: gui/src/connections_dlg.cpp:712
 msgid "Data is flowing"
-msgstr ""
+msgstr "Er komen gegevens binnen"
 
 #: gui/src/connections_dlg.cpp:785
 msgid "Ok to delete connection on "
-msgstr ""
+msgstr "Verbinding verwijderen op "
 
 #: gui/src/connections_dlg.cpp:786
 msgid "Delete connection?"
-msgstr ""
+msgstr "Verbinding verwijderen?"
 
 #: gui/src/connections_dlg.cpp:817 gui/src/options.cpp:3975
 msgid "General"
@@ -4888,31 +4888,31 @@ msgstr "Algemeen"
 
 #: gui/src/connections_dlg.cpp:835
 msgid "Adjust Nav data priorities..."
-msgstr ""
+msgstr "Prioriteiten navigatiegegevens..."
 
 #: gui/src/connections_dlg.cpp:849
 msgid "Upload Format"
-msgstr ""
+msgstr "Uploadformaat"
 
 #: gui/src/connections_dlg.cpp:884
 msgid "Generic NMEA 0183"
-msgstr ""
+msgstr "Algemeen NMEA 0183"
 
 #: gui/src/connections_dlg.cpp:884
 msgid "Garmin Host mode"
-msgstr ""
+msgstr "Garmin Host-modus"
 
 #: gui/src/connections_dlg.cpp:884
 msgid "Furuno GP4X"
-msgstr ""
+msgstr "Furuno GP4X"
 
 #: gui/src/connections_dlg.cpp:902 gui/src/connections_dlg.cpp:908
 msgid "Advanced "
-msgstr ""
+msgstr "Uitgebreid "
 
 #: gui/src/connections_dlg.cpp:936
 msgid "Use magnetic bearing in output sentence APB"
-msgstr ""
+msgstr "Magnetische peiling gebruiken in uitvoerzin APB"
 
 #: gui/src/connections_dlg.cpp:949 gui/src/connections_dlg.cpp:973
 msgid "Always send RMB and RMC NMEA0183 data"
@@ -4920,11 +4920,11 @@ msgstr ""
 
 #: gui/src/connections_dlg.cpp:991
 msgid "Filter NMEA course and speed data. Filter period: "
-msgstr ""
+msgstr "NMEA-koers- en snelheidsgegevens filteren. Filterperiode: "
 
 #: gui/src/connections_dlg.cpp:1025
 msgid "NMEA 0183 Talker Id: "
-msgstr ""
+msgstr "NMEA 0183 Talker-ID: "
 
 #: gui/src/connections_dlg.cpp:1031
 msgid "Enter a two-letter talker ID to override the default ID in NMEA sentences generated by OpenCPN (e.g., GP, HC, EC). This affects only sentences created by OpenCPN, not those forwarded from other devices."
@@ -4932,15 +4932,15 @@ msgstr ""
 
 #: gui/src/connections_dlg.cpp:1055
 msgid "Netmask: "
-msgstr ""
+msgstr "Netmasker: "
 
 #: gui/src/connections_dlg.cpp:1057
 msgid "length (bits): "
-msgstr ""
+msgstr "lengte (bits): "
 
 #: gui/src/connections_dlg.cpp:1211
 msgid "Configure new connection"
-msgstr "Nieuwe verbinding configureren"
+msgstr "Nieuwe verbinding"
 
 #: gui/src/connections_dlg.cpp:1259
 msgid "Driver creation warning"
@@ -4948,7 +4948,7 @@ msgstr ""
 
 #: gui/src/connections_dlg.cpp:1268
 msgid "Unable to create a connection as configured. Connected port or address was missing."
-msgstr ""
+msgstr "Kan de verbinding niet maken zoals ingesteld. De poort of het adres ontbreekt."
 
 #: gui/src/conn_params_panel.cpp:149
 msgid "Enable"
@@ -4989,43 +4989,43 @@ msgstr "Driver"
 
 #: gui/src/data_monitor.cpp:311
 msgid "Quick filter:"
-msgstr ""
+msgstr "Snelfilter:"
 
 #: gui/src/data_monitor.cpp:405
 msgid "All data"
-msgstr ""
+msgstr "Alle gegevens"
 
 #: gui/src/data_monitor.cpp:406
 msgid "All NMEA data"
-msgstr ""
+msgstr "Alle NMEA-gegevens"
 
 #: gui/src/data_monitor.cpp:407
 msgid "Default settings"
-msgstr ""
+msgstr "Standaardinstellingen"
 
 #: gui/src/data_monitor.cpp:408
 msgid "Malformed messages"
-msgstr ""
+msgstr "Onjuiste berichten"
 
 #: gui/src/data_monitor.cpp:409
 msgid "NMEA input data"
-msgstr ""
+msgstr "NMEA-invoer"
 
 #: gui/src/data_monitor.cpp:410
 msgid "NMEA output data"
-msgstr ""
+msgstr "NMEA-uitvoer"
 
 #: gui/src/data_monitor.cpp:411
 msgid "Messages to plugins"
-msgstr ""
+msgstr "Berichten naar plugins"
 
 #: gui/src/data_monitor.cpp:460
 msgid "Resume"
-msgstr ""
+msgstr "Hervatten"
 
 #: gui/src/data_monitor.cpp:460
 msgid "Pause"
-msgstr ""
+msgstr "Pauze"
 
 #: gui/src/data_monitor.cpp:501 gui/src/options.cpp:1050
 #: gui/src/options.cpp:1920 gui/src/options.cpp:2032
@@ -5037,31 +5037,31 @@ msgstr "standaard"
 
 #: gui/src/data_monitor.cpp:508
 msgid "Log format"
-msgstr ""
+msgstr "Logformaat"
 
 #: gui/src/data_monitor.cpp:517
 msgid "Change..."
-msgstr ""
+msgstr "Wijzigen..."
 
 #: gui/src/data_monitor.cpp:520
 msgid "Overwrite existing file"
-msgstr ""
+msgstr "Bestaand bestand overschrijven"
 
 #: gui/src/data_monitor.cpp:524
 msgid "Log file"
-msgstr ""
+msgstr "Logbestand"
 
 #: gui/src/data_monitor.cpp:547
 msgid "Select logfile"
-msgstr ""
+msgstr "Kies logbestand"
 
 #: gui/src/data_monitor.cpp:565
 msgid "Logging setup"
-msgstr ""
+msgstr "Loginstellingen"
 
 #: gui/src/data_monitor.cpp:608
 msgid "Use colors"
-msgstr ""
+msgstr "Kleuren gebruiken"
 
 #: gui/src/data_monitor.cpp:609
 msgid "Colors..."
@@ -5073,19 +5073,19 @@ msgstr ""
 
 #: gui/src/data_monitor.cpp:611
 msgid "Logging..."
-msgstr ""
+msgstr "Loggen..."
 
 #: gui/src/data_monitor.cpp:613
 msgid "Create new..."
-msgstr ""
+msgstr "Nieuw maken..."
 
 #: gui/src/data_monitor.cpp:614
 msgid "Edit..."
-msgstr ""
+msgstr "Bewerken..."
 
 #: gui/src/data_monitor.cpp:615
 msgid "Delete..."
-msgstr ""
+msgstr "Verwijderen..."
 
 #: gui/src/data_monitor.cpp:616
 msgid "Rename..."
@@ -5093,7 +5093,7 @@ msgstr ""
 
 #: gui/src/data_monitor.cpp:617
 msgid "Filters..."
-msgstr ""
+msgstr "Filters..."
 
 #: gui/src/data_monitor.cpp:619 gui/src/data_monitor.cpp:672
 msgid "Edit active filter"
@@ -5113,7 +5113,7 @@ msgstr "Stop loggen"
 
 #: gui/src/data_monitor.cpp:757
 msgid "Start logging"
-msgstr ""
+msgstr "Start loggen"
 
 #: gui/src/data_monitor.cpp:793
 msgid "Open quick filter"
@@ -5140,7 +5140,7 @@ msgstr "Spreadsheet csv bestand (*.csv)fting *.csv"
 #: gui/src/data_monitor.cpp:950 gui/src/ocpn_frame.cpp:3701
 #: gui/src/ocpn_frame.cpp:3706
 msgid "Data Monitor"
-msgstr ""
+msgstr "Datamonitor"
 
 #: gui/src/detail_slider.cpp:83
 msgid "CM93 Detail Level"
@@ -5795,7 +5795,7 @@ msgstr "dubbele waypoints gedetecteerd tijdens het importeren en genegeerd."
 
 #: gui/src/notification_manager_gui.cpp:133
 msgid "Repeat:"
-msgstr ""
+msgstr "Herhaald:"
 
 #: gui/src/notification_manager_gui.cpp:294
 msgid "OpenCPN Notifications"
@@ -5803,7 +5803,7 @@ msgstr ""
 
 #: gui/src/notification_manager_gui.cpp:310
 msgid "Acknowledge All"
-msgstr ""
+msgstr "Alles bevestigen"
 
 #: gui/src/ocpn_app.cpp:407
 msgid "\n"
@@ -5812,7 +5812,12 @@ msgid "\n"
 "OpenCPN must only be used in conjunction with approved paper charts and traditional methods of navigation.\n\n"
 "DO NOT rely upon OpenCPN for safety of life or property.\n\n"
 "Please click \"Agree\" and proceed, or \"Cancel\" to quit.\n"
-msgstr ""
+msgstr "\n"
+"OpenCPN wordt verspreid in de hoop dat het nuttig is, maar ZONDER ENIGE GARANTIE; zelfs zonder de impliciete garantie van VERKOOPBAARHEID of GESCHIKTHEID VOOR EEN BEPAALD DOEL.\n\n"
+"Zie de GNU General Public License voor meer details.\n\n"
+"OpenCPN mag alleen worden gebruikt samen met goedgekeurde papieren kaarten en traditionele navigatiemethoden.\n\n"
+"Vertrouw voor de veiligheid van mensen of eigendommen NIET op OpenCPN.\n\n"
+"Tik op \"Akkoord\" om verder te gaan, of op \"Annuleren\" om te stoppen.\n"
 
 #: gui/src/ocpn_app.cpp:421
 msgid "OpenCPN for Android"
@@ -5824,7 +5829,7 @@ msgstr "Welkom bij OpenCPN"
 
 #: gui/src/ocpn_app.cpp:432
 msgid "Agree"
-msgstr ""
+msgstr "Akkoord"
 
 #: gui/src/ocpn_app.cpp:557
 msgid "Cannot load route or waypoint file: "
@@ -6460,7 +6465,7 @@ msgstr "Toevoegen MMSI-eigenschappen"
 
 #: gui/src/options.cpp:1698 gui/src/options.cpp:2000 gui/src/options.cpp:2180
 msgid "Nautical miles"
-msgstr "zeemijl (NM of NMi)"
+msgstr "zeemijl"
 
 #: gui/src/options.cpp:1699
 msgid "Statute miles"
@@ -6708,7 +6713,7 @@ msgstr "Automatische dagelijkse tracks vanaf"
 
 #: gui/src/options.cpp:2120
 msgid "Computer"
-msgstr "Computer"
+msgstr "Dit apparaat"
 
 #: gui/src/options.cpp:2145
 msgid "Highlight Tracks"
@@ -6776,7 +6781,7 @@ msgstr "Toon markeringspunten alleen bij kaartschaal groter dan 1:"
 
 #: gui/src/options.cpp:2313
 msgid "Show marks only at a chartscale smaller than 1 :"
-msgstr ""
+msgstr "Toon markeringspunten alleen bij kaartschaal kleiner dan 1:"
 
 #: gui/src/options.cpp:2322
 msgid "Override the settings for chartscale based visibility and show always"
@@ -6853,7 +6858,7 @@ msgstr "Forceer volledige herbouw van database"
 
 #: gui/src/options.cpp:2552
 msgid "Rebuild Chart Database"
-msgstr ""
+msgstr "Kaartdatabase opnieuw opbouwen"
 
 #: gui/src/options.cpp:2556
 msgid "Prepare all ENC Charts"
@@ -7186,7 +7191,7 @@ msgstr "Diepte"
 
 #: gui/src/options.cpp:4443 gui/src/options.cpp:4656
 msgid "Height"
-msgstr ""
+msgstr "Hoogte"
 
 #: gui/src/options.cpp:4461 gui/src/options.cpp:4672
 msgid "Temperature"
@@ -7260,7 +7265,7 @@ msgstr "Toon magnetische koersen en peilingen."
 
 #: gui/src/options.cpp:4760 gui/src/options.cpp:6307
 msgid "WMM Plugin calculated magnetic variation"
-msgstr "Door WMM Plugin berekende magn. variatie"
+msgstr "Magn. variatie (WMM)"
 
 #: gui/src/options.cpp:4778
 msgid " To set the magnetic variation manually,\n"
@@ -7607,7 +7612,7 @@ msgstr "Kies letterkleur..."
 
 #: gui/src/options.cpp:5578
 msgid "Reset to Default"
-msgstr ""
+msgstr "Standaard herstellen"
 
 #: gui/src/options.cpp:5582
 msgid "Sample"
@@ -7639,7 +7644,7 @@ msgstr "Verberg werkbalk na"
 
 #: gui/src/options.cpp:5652
 msgid "Enable Debug in root context menu"
-msgstr ""
+msgstr "Debug in het hoofdcontextmenu inschakelen"
 
 #: gui/src/options.cpp:5661
 msgid "Play Ships Bells"
@@ -7695,7 +7700,7 @@ msgstr "Muiswiel zoom gevoeligheid"
 
 #: gui/src/options.cpp:6054
 msgid "Ok"
-msgstr ""
+msgstr "OK"
 
 #: gui/src/options.cpp:6063
 msgid "Apply"
@@ -7732,7 +7737,7 @@ msgstr "Plugins"
 
 #: gui/src/options.cpp:6312
 msgid "User set magnetic variation"
-msgstr "Gebruikersinstelling magn. variatie"
+msgstr "Magn. variatie"
 
 #: gui/src/options.cpp:6781
 msgid "feet"
@@ -7869,7 +7874,7 @@ msgstr "Software OpenGL (OpenCPN herstarten)"
 
 #: gui/src/options.cpp:9515
 msgid "Use Accelerated Panning"
-msgstr "Gebruik versnelde planning"
+msgstr "Gebruik versneld pannen"
 
 #: gui/src/options.cpp:9517
 msgid "Texture Settings"
@@ -8250,7 +8255,7 @@ msgstr "Track-naam"
 
 #: gui/src/routemanagerdialog.cpp:612
 msgid "Start Date"
-msgstr ""
+msgstr "Startdatum"
 
 #: gui/src/routemanagerdialog.cpp:614
 msgid "Length"
@@ -8270,11 +8275,11 @@ msgstr "Verstuur naar 2ᵉ OpenCPN"
 
 #: gui/src/routemanagerdialog.cpp:709
 msgid "Show all marks"
-msgstr ""
+msgstr "Toon alle markeringen"
 
 #: gui/src/routemanagerdialog.cpp:747
 msgid "Mark Name"
-msgstr ""
+msgstr "Markeringsnaam"
 
 #: gui/src/routemanagerdialog.cpp:749
 msgid "Distance from own ship"
@@ -8417,7 +8422,7 @@ msgstr "Klaar."
 
 #: gui/src/routemanagerdialog.cpp:2345
 msgid "Are you sure you want to delete <ALL> tracks?"
-msgstr "Weet u zeker dat u <ALL> tracks wilt verwijderen?"
+msgstr "Weet u zeker dat u ALLE tracks wilt verwijderen?"
 
 #: gui/src/routemanagerdialog.cpp:2415
 msgid "Overruled"
@@ -8429,7 +8434,7 @@ msgstr "Het waypoint dat u wilt verwijderen wordt gebruikt in een route. Weet u 
 
 #: gui/src/routemanagerdialog.cpp:2849
 msgid "Are you sure you want to delete <ALL> waypoints?"
-msgstr "Weet u zeker dat u <ALL> waypoints wilt verwijderen?"
+msgstr "Weet u zeker dat u ALLE waypoints wilt verwijderen?"
 
 #: gui/src/routemanagerdialog.cpp:2854
 msgid "There are some waypoints used in routes or anchor alarms.\n"
@@ -8565,7 +8570,7 @@ msgstr "LMT@Lokatie"
 #: gui/src/route_prop_dlg.cpp:252 gui/src/track_prop_dlg.cpp:448
 #: gui/src/track_prop_dlg.cpp:474 gui/src/track_prop_dlg.cpp:851
 msgid "Honor Global Settings"
-msgstr ""
+msgstr "Volgens algemene instelling"
 
 #: gui/src/route_prop_dlg.cpp:310 gui/src/track_prop_dlg.cpp:523
 #: gui/src/track_prop_dlg.cpp:765
@@ -9210,3 +9215,42 @@ msgstr ""
 #: gui/src/user_colors_dlg.cpp:139
 msgid "Restore defaults"
 msgstr ""
+
+#: gui/src/options.cpp (opencpn-ios)
+msgid "Back"
+msgstr "Terug"
+
+#: app/ios/source_scan.cpp (opencpn-ios)
+msgid "Find sources..."
+msgstr "Zoek bronnen..."
+
+msgid "Find sources"
+msgstr "Bronnen zoeken"
+
+msgid "Looking for navigation data sources, this may take a while..."
+msgstr "Zoeken naar navigatiebronnen, dit kan even duren..."
+
+msgid "Looking for UDP data feeds..."
+msgstr "Luisteren naar UDP-gegevens..."
+
+msgid "Looking for TCP servers..."
+msgstr "Zoeken naar TCP-servers..."
+
+msgid "Looking for Signal K servers..."
+msgstr "Zoeken naar Signal K-servers..."
+
+msgid "TCP port %d..."
+msgstr "TCP-poort %d..."
+
+msgid "No navigation data sources found."
+msgstr "Geen navigatiebronnen gevonden."
+
+msgid "All sources found are already configured."
+msgstr "Alle gevonden bronnen zijn al ingesteld."
+
+msgid "Select the sources to add (receive only):"
+msgstr "Toevoegen, alleen ontvangen:"
+
+#: gui/src/s57chart.cpp (opencpn-ios)
+msgid "ENC cell %s has been cancelled by its producer (update %d) and is not shown. Install a current chart for this area."
+msgstr "ENC-kaart %s is door de uitgever ingetrokken (update %d) en wordt niet getoond. Installeer een actuele kaart voor dit gebied."
