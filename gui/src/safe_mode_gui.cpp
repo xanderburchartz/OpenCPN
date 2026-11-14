@@ -37,6 +37,13 @@
 
 #include "model/safe_mode.h"
 
+#ifdef __OCPN__IOS__
+#include <wx/display.h>
+
+#include <QVariant>
+#include <QWidget>
+#endif
+
 // clang-format off
 static const char* const kLastRunErrorMsg1 =
     // clang-format off
@@ -118,6 +125,13 @@ public:
     vbox->Add(new ButtonSizer(this), wxSizerFlags().Expand().Border());
     SetSizer(vbox);
     wxDialog::Layout();
+#ifdef __OCPN__IOS__
+    // iOS: as an alert with its own buttons ("Safe restart" / "Normal start"),
+    // not as a sheet: there "Done" chose safe mode, which nobody expects.
+    if (GetHandle()) GetHandle()->setProperty("ocpnios_alert", true);
+    const wxRect area = wxDisplay(this).GetClientArea();  // as 5.14 BaseDialog
+    SetInitialSize(wxSize(area.GetWidth() * 9 / 10, area.GetHeight() * 6 / 10));
+#endif
     wxDialog::Show();
 
     Bind(wxEVT_CHAR_HOOK, [&](wxKeyEvent& ev) { OnKeyPressed(ev); });

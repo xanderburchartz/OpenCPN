@@ -24,9 +24,12 @@
 #ifdef _WIN32
 #include <winsock2.h>
 #include <windows.h>
-#elif defined(__APPLE__)
+#elif defined(__APPLE__) && !defined(__OCPN__IOS__)  // iOS: no libproc
 #include <errno.h>
 #include <libproc.h>
+#endif
+#ifdef __OCPN__IOS__
+#include <errno.h>
 #endif
 
 #include <chrono>
@@ -69,7 +72,7 @@ static bool DoesProcessExist(int pid) {
   DWORD ret = WaitForSingleObject(process, 0);
   CloseHandle(process);
   return ret == WAIT_TIMEOUT;
-#elif defined(__APPLE__)
+#elif defined(__APPLE__) && !defined(__OCPN__IOS__)  // iOS: no libproc
   char pathbuf[PROC_PIDPATHINFO_MAXSIZE];
   bool is_active;
   int rv = proc_pidpath(pid, pathbuf, sizeof(pathbuf));

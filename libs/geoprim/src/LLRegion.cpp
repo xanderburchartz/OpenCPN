@@ -36,6 +36,9 @@
  #include <qopengl.h>
  #include <GL/gl_private.h>  // this is a cut-down version of gl.h
  #include <GLES2/gl2.h>
+#elif defined(__OCPN__IOS__)  // iOS: GL via Qt (OpenGL ES)
+ #include <qopengl.h>
+ #include <GL/gl_private.h>
 #elif defined(__MSVC__)
  #include "glew.h"
  #include <GL/glu.h>

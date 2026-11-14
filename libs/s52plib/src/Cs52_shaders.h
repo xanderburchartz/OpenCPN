@@ -31,7 +31,7 @@
 
 #include "s52plibGL.h"
 
-#ifdef __OCPN__ANDROID__
+#if defined(__OCPN__ANDROID__) || defined(__OCPN__IOS__)  // iOS: qDebug in the GLES2 path
 #include "qdebug.h"
 #endif
 

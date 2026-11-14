@@ -41,13 +41,21 @@
 #include "msw_sound.h"
 #endif
 
+#if defined(__OCPN__IOS__)
+// iOS: AVFoundation (app/ios/ios_sound.mm); wxSound does not work under wxQt/iOS.
+o_sound::Sound* ocpnios_NewSound();
+#endif
+
 namespace o_sound {
 
 using namespace  o_sound_private;
 
 Sound *g_anchorwatch_sound = Factory();
 
-#if defined(__ANDROID__)
+#if defined(__OCPN__IOS__)
+Sound* Factory(const char* not_used) { return ::ocpnios_NewSound(); }
+
+#elif defined(__ANDROID__)
 Sound* Factory(const char* not_used) { return new AndroidSound(); }
 
 #elif defined(HAVE_PORTAUDIO)
