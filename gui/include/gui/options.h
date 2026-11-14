@@ -294,7 +294,11 @@ public:
 
   void OnClose(wxCloseEvent &event);
 
+#ifdef __OCPN__IOS__
+  void ShowOKButtons(bool _show);  // app/ios/options_ios.cpp
+#else
   void ShowOKButtons(bool _show) { m_OK_Cancel_Apply_buttons->Show(_show); }
+#endif
 
   void CreateListbookIcons();
   void CreateControls(void);
@@ -402,6 +406,34 @@ public:
   wxListbook *m_pListbook;
 #else
   wxNotebook *m_pListbook;
+#endif
+#ifdef __OCPN__IOS__
+  // iOS: settings as iOS-style navigation (list, then page with a back button).
+  // Levels: 0 = categories, 1 = sections of a category (the tabs of a
+  // wxNotebook page), 2 = the page itself.
+  void IosShowList(bool list);
+  void IosGoLevel(int level);
+  void IosOpenCategory();
+  void IosOpenSubPage(int idx);
+  void IosBack();
+  void IosApplyLayout();
+  void IosApplyLook();
+  int m_iosLookDark = -1;  // last applied dark mode (IosApplyLayout)
+  wxNotebook *IosCurrentNotebook();
+  void IosFitPage(wxWindow *page);
+  bool m_iosListMode = true;
+  int m_iosLevel = 0;
+  wxButton *m_iosBackButton = nullptr;
+  wxStaticText *m_iosTitle = nullptr;
+  wxBoxSizer *m_iosHead = nullptr;
+  wxListBox *m_iosSubList = nullptr;
+  // Parts of CreateControls / CreatePanel_Units (app/ios/options_ios.cpp).
+  void IosCreateHeader(options *itemDialog1, wxBoxSizer *itemBoxSizer2,
+                       int border_size);
+  void IosSetupNavLists();
+  void IosMoveButtonsToHeader(int border_size);
+  void IosAddMagVarRow(wxScrolledWindow *panelUnits,
+                       wxFlexGridSizer *unitsSizer, int group_item_spacing);
 #endif
 
   wxBoxSizer *m_OK_Cancel_Apply_buttons;
