@@ -66,6 +66,11 @@
 #include "icons.h"
 #include "version.h"
 
+#ifdef __OCPN__IOS__
+#include <wx/stdpaths.h>
+wxString ocpnios_DisplayPath(const wxString &path);  // app/ios/display_path.cpp
+#endif
+
 #ifdef __ANDROID__
 #include <QtAndroidExtras/QAndroidJniObject>
 #include "qdebug.h"
@@ -293,6 +298,19 @@ int chartdldr_pi::Init() {
     wxString s1 = st.GetNextToken();
     wxString s2 = st.GetNextToken();
     wxString s3 = st.GetNextToken();
+#ifdef __OCPN__IOS__
+    // iOS: after a reinstall or update the app gets a new container, so the
+    // saved absolute path is stale. Map the part from "/Documents/" onto the
+    // current container.
+    if (!s3.IsEmpty() && !wxDirExists(s3)) {
+      int k = s3.Find("/Documents/");
+      if (k != wxNOT_FOUND) {
+        wxString docs = wxStandardPaths::Get().GetDocumentsDir();
+        wxString moved = docs + s3.Mid(k + wxStrlen("/Documents"));
+        if (wxDirExists(moved)) s3 = moved;
+      }
+    }
+#endif
     if (!s2.IsEmpty())  // scrub empty sources.
       m_ChartSources.push_back(std::make_unique<ChartSource>(s1, s2, s3));
   }
@@ -422,6 +440,11 @@ bool chartdldr_pi::SaveConfig() {
     pConf->Write("PreselectNew", m_reselect_new);
     pConf->Write("PreselectUpdated", m_reselect_updated);
     pConf->Write("AllowBulkUpdate", m_allow_bulk_update);
+#ifdef __OCPN__IOS__
+    // iOS terminates the app without a clean shutdown; without Flush a newly
+    // added chart source was lost after a restart.
+    pConf->Flush();
+#endif
 
     return true;
   } else
@@ -680,10 +703,22 @@ void ChartDldrPanelImpl::SetSource(int id) {
     FillFromFile(cs->GetUrl(), cs->GetDir(), m_plugin->m_reselect_new,
                  m_plugin->m_reselect_updated);
     wxURI url(cs->GetUrl());
+#ifdef __OCPN__IOS__
+    // iOS: show only the catalog name, wrapped to the width; the URL and
+    // directory ran off the right edge of the screen.
+    m_chartsLabel->SetLabel(wxString::Format(_("Charts: %s"), cs->GetName()));
+    {
+      // Use the notebook width: the page itself is not laid out yet the first
+      // time and would wrap after every word.
+      const int w = m_DLoadNB->GetClientSize().x - 24;
+      if (w > 200) m_chartsLabel->Wrap(w);
+    }
+#else
     m_chartsLabel->SetLabel(wxString::Format(
         _("Charts: %s"),
         (cs->GetName() + _(" from ") + url.BuildURI() + " -> " + cs->GetDir())
             .c_str()));
+#endif
     if (::wxIsBusy()) ::wxEndBusyCursor();
   } else {
     m_plugin->m_chart_source = nullptr;
@@ -788,6 +823,9 @@ void ChartDldrPanelImpl::FillFromFile(const wxString &url, const wxString &dir,
     }
 
 #if !defined(CHART_LIST)  // wxDataViewListCtrl handles all of this AFAIK: Dan
+#ifdef __OCPN__IOS__
+    SyncAllChartsToggle();
+#endif
     m_scrollWinChartList->ClearBackground();
     m_scrollWinChartList->FitInside();
     m_scrollWinChartList->GetSizer()->Layout();
@@ -888,7 +926,11 @@ void ChartDldrPanelImpl::AppendCatalog(std::unique_ptr<ChartSource> &cs) {
   long id = m_lbChartSources->GetItemCount();
   m_lbChartSources->InsertItem(id, cs->GetName());
   m_lbChartSources->SetItem(id, 1, _("(Please update first)"));
+#ifdef __OCPN__IOS__
+  m_lbChartSources->SetItem(id, 2, ocpnios_DisplayPath(cs->GetDir()));
+#else
   m_lbChartSources->SetItem(id, 2, cs->GetDir());
+#endif
   wxURI url(cs->GetUrl());
   if (url.IsReference()) {
     OCPNMessageBox_PlugIn(
@@ -1059,7 +1101,11 @@ void ChartDldrPanelImpl::UpdateChartList(wxCommandEvent &event) {
             id, 1,
             m_plugin->m_chart_catalog.GetReleaseDate().Format(
                 "%Y-%m-%d %H:%M"));
+#ifdef __OCPN__IOS__
+        m_lbChartSources->SetItem(id, 2, ocpnios_DisplayPath(cs->GetDir()));
+#else
         m_lbChartSources->SetItem(id, 2, cs->GetDir());
+#endif
 
       } else
         OCPNMessageBox_PlugIn(
@@ -1304,6 +1350,21 @@ void ChartDldrPanelImpl::CheckAllCharts(bool value) {
   m_hold_info = false;
 #endif /* CHART_LIST */
 }
+
+#ifdef __OCPN__IOS__
+void ChartDldrPanelImpl::OnToggleAllCharts(wxCommandEvent &event) {
+  if (m_cbAllCharts) CheckAllCharts(m_cbAllCharts->GetValue());
+}
+
+// Keep the "select all" switch in sync with the list: on when all charts are
+// on.
+void ChartDldrPanelImpl::SyncAllChartsToggle() {
+  if (!m_cbAllCharts) return;
+  int n = GetChartCount();
+  m_cbAllCharts->Show(n > 1);
+  m_cbAllCharts->SetValue(n > 0 && GetCheckedChartCount() == n);
+}
+#endif
 
 void ChartDldrPanelImpl::CheckNewCharts(bool value) {
   for (int i = 0; i < GetChartCount(); i++) {
@@ -1578,6 +1639,16 @@ ChartDldrPanelImpl::ChartDldrPanelImpl(chartdldr_pi *plugin, wxWindow *parent,
     AppendCatalog(m_plugin->m_ChartSources.at(i));
   }
   m_is_populated = true;
+#ifdef __OCPN__IOS__
+  // iOS: without a selected catalog the "Download Charts" tab was empty with no
+  // hint. Select the last used catalog, or else the first one.
+  if (m_lbChartSources->GetItemCount() > 0) {
+    int sel = m_plugin->GetSourceId();
+    if (sel < 0 || sel >= m_lbChartSources->GetItemCount()) sel = 0;
+    SelectCatalog(sel);
+    SetSource(sel);  // wxQt sends no selection event on SetItemState
+  }
+#endif
 }
 
 void ChartDldrPanelImpl::OnPaint(wxPaintEvent &event) {
@@ -2452,6 +2523,11 @@ void ChartDldrGuiAddSourceDlg::OnSourceSelected(wxTreeEvent &event) {
 
     m_tSourceName->SetValue(cs->GetName());
     m_tChartSourceUrl->SetValue(cs->GetUrl());
+#ifdef __OCPN__IOS__
+    // iOS: always propose the directory of the selected source, otherwise a
+    // directory inside the app sandbox can stay selected.
+    m_last_path = m_tcChartDirectory->GetValue();
+#endif
     if (m_tcChartDirectory->GetValue() == m_last_path) {
       m_tcChartDirectory->SetValue(FixPath(cs->GetDir()));
       m_panelChartDirectory->SetText(FixPath(cs->GetDir()));
