@@ -333,8 +333,18 @@ void ShapeBaseChart::DoDrawPolygonFilled(ocpnDC &pnt, ViewPort &vp,
     auto bbox = vp.GetBBox();
     for (auto &point : ring.getPoints()) {
       // if (bbox.ContainsMarge(point.getY(), point.getX(), 0.05)) {
+#ifdef __OCPN__IOS__
+      // iOS: Antarctica (and the rings around the poles) have points at +-90
+      // degrees, which is infinitely far away in Mercator. Qt's rasterizer drew
+      // such a polygon as a solid fill. Clamp the latitude to +-85 degrees,
+      // beyond the edge of what the screen shows.
+      double plat = wxMax(-85.0, wxMin(85.0, point.getY()));
+      wxPoint2DDouble q =
+          ShapeBaseChartSet::GetDoublePixFromLL(vp, plat, point.getX());
+#else
       wxPoint2DDouble q =
           ShapeBaseChartSet::GetDoublePixFromLL(vp, point.getY(), point.getX());
+#endif
       if (round(q.m_x) != round(old_x) || round(q.m_y) != round(old_y)) {
         poly_pt[cnt].x = round(q.m_x);
         poly_pt[cnt].y = round(q.m_y);
