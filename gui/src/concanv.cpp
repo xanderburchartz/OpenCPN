@@ -68,6 +68,10 @@ END_EVENT_TABLE()
 
 // Define a constructor for my canvas
 ConsoleCanvasWin::ConsoleCanvasWin(wxWindow* parent) {
+  // Under wxQt the show event already arrives during Create(); OnShow must not
+  // touch pCDI/m_pitemBoxSizerLeg yet (crash when turning OpenGL off).
+  pCDI = nullptr;
+  m_pitemBoxSizerLeg = nullptr;
   m_speedUsed = SPEED_SOG;
   pbackBrush = NULL;
   m_bNeedClear = false;
@@ -173,6 +177,7 @@ void ConsoleCanvasWin::OnPaint(wxPaintEvent& event) {
 }
 
 void ConsoleCanvasWin::OnShow(wxShowEvent& event) {
+  if (!pCDI || !m_pitemBoxSizerLeg) return;
   pCDI->Show(g_bShowActiveRouteHighway);
   m_pitemBoxSizerLeg->SetSizeHints(this);
 }
