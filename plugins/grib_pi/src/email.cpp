@@ -75,6 +75,34 @@ bool wxEmail::Send(wxMailMessage& message, int sendMethod,
     return session.Send(message);
 #endif
 }
+#elif defined(__OCPN__IOS__)
+// iOS: no shell or sendmail. A mailto: link opens the Mail app with the request
+// filled in; the user sends it from there.
+static wxString IosMailtoEscape(const wxString& s) {
+  wxString out;
+  for (unsigned char c : std::string(s.ToUTF8())) {
+    if (isalnum(c) || c == '-' || c == '_' || c == '.' || c == '~' ||
+        c == '@' || c == ',')
+      out << (char)c;
+    else
+      out << wxString::Format("%%%02X", c);
+  }
+  return out;
+}
+
+bool wxEmail::Send(wxMailMessage& message, int sendMethod,
+                   const wxString& profileName, const wxString& sendMail2,
+                   const wxString& sendMail1, const wxString& sendMail0) {
+  wxString addr;
+  for (size_t rcpt = 0; rcpt < message.m_to.GetCount(); rcpt++) {
+    if (rcpt > 0) addr << ",";
+    addr << message.m_to[rcpt];
+  }
+  wxString url = "mailto:" + IosMailtoEscape(addr) +
+                 "?subject=" + IosMailtoEscape(message.m_subject) +
+                 "&body=" + IosMailtoEscape(message.m_body);
+  return wxLaunchDefaultBrowser(url);
+}
 #elif defined(__UNIX__)
 bool wxEmail::Send(wxMailMessage& message, int sendMethod,
                    const wxString& profileName, const wxString& sendMail2,
