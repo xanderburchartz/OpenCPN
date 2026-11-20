@@ -45,11 +45,6 @@ jobs:
             pkg_mod: 11
             MACOSX_DEPLOYMENT_TARGET: 10.15
             CREATE_DMG: 1
-          - name: macOS 15 wxOSX
-            runner: macos-15
-            pkg_mod: 11
-            MACOSX_DEPLOYMENT_TARGET: 11
-            CREATE_DMG: 1
     env:
       wxGTK_VERSION: ${{ matrix.gtk_version && matrix.gtk_version || 3 }}
       pkg_mod: ${{ matrix.pkg_mod }}
