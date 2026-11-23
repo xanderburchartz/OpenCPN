@@ -115,6 +115,10 @@
 #include "androidUTIL.h"
 #endif
 
+#ifdef __OCPN__IOS__
+#include "model/ios_hooks.h"
+#endif
+
 MyConfig *pConfig;  ///< Global instance
 static bool g_bLayersLoaded;
 
@@ -491,6 +495,10 @@ int MyConfig::LoadMyConfigRaw(bool bAsTemplate) {
   Read("ShipScaleFactor", &g_ShipScaleFactor);
   Read("ENCSoundingScaleFactor", &g_ENCSoundingScaleFactor);
   Read("ENCTextScaleFactor", &g_ENCTextScaleFactor);
+#ifdef __OCPN__IOS__
+  // iOS: default chart text and sounding size to 2x, once.
+  ocpnios_ConfigTextScaleDefault(this);
+#endif
   Read("ObjQueryAppendFilesExt", &g_ObjQFileExt);
 
   // Plugin catalog handler persistent variables.
@@ -699,6 +707,10 @@ int MyConfig::LoadMyConfigRaw(bool bAsTemplate) {
 
   Read("Locale", &g_locale);
   Read("LocaleOverride", &g_localeOverride);
+#ifdef __OCPN__IOS__
+  // iOS: reset the language to the device language once.
+  ocpnios_ConfigLocaleResetOnce(this);
+#endif
 
   // We allow 0-99 backups ov navobj.xml
   Read("KeepNavobjBackups", &g_navobjbackups);
@@ -1092,6 +1104,10 @@ int MyConfig::LoadMyConfigRaw(bool bAsTemplate) {
     while (bCont) {
       Read(str, &val);  // Get a file name and add it to the list just in case
                         // it is not repeated
+#ifdef __OCPN__IOS__
+      // iOS: map a stale app bundle path to the current bundle.
+      ocpnios_MapBundleDataPath(val);
+#endif
       // We have seen duplication of dataset entries in
       // https://github.com/OpenCPN/OpenCPN/issues/3042, this effectively gets
       // rid of them.
@@ -1478,6 +1494,11 @@ bool MyConfig::LoadChartDirArray(ArrayOfCDI &ChartDirArray) {
           dirname = new_dir;
         }
 
+#ifdef __OCPN__IOS__
+        // iOS: map a chart dir in a stale data container to the current one.
+        ocpnios_MapContainerChartDir(dirname, nAdjustChartDirs);
+#endif
+
         ChartDirInfo cdi;
         cdi.fullpath = dirname.BeforeFirst('^');
         cdi.magic_number = dirname.AfterFirst('^');
@@ -1716,6 +1737,11 @@ void MyConfig::LoadConfigCanvas(canvasConfig *cConfig, bool bApplyAsTemplate) {
 
     Read("canvasInitialdBIndex", &cConfig->DBindex, 0);
     Read("canvasbFollow", &cConfig->bFollow, 0);
+#ifdef __OCPN__IOS__
+    // iOS: always start with follow mode on.
+    // Panning still turns follow mode off during use.
+    cConfig->bFollow = true;
+#endif
 
     Read("canvasCourseUp", &cConfig->bCourseUp, 0);
     Read("canvasHeadUp", &cConfig->bHeadUp, 0);

@@ -836,6 +836,28 @@ public:
     filter_label_box->Add(new wxStaticText(this, wxID_ANY, _("Filter")));
 
     auto flags = wxSizerFlags(0).Border();
+#ifdef __OCPN__IOS__
+    // iOS: two fixed rows with smaller margins. On a phone the wrap sizer ran
+    // on beyond the fixed height and only "Start logging" was visible.
+    flags = wxSizerFlags(0).Border(wxALL, 4);
+    auto get_current_filter = [&] {
+      return m_filter_choice->GetStringSelection().ToStdString();
+    };
+    auto row1 = new wxBoxSizer(wxHORIZONTAL);
+    row1->Add(m_log_button, flags);
+    row1->AddStretchSpacer(1);
+    row1->Add(new PauseResumeButton(this, std::move(on_stop)), flags);
+    row1->Add(new CopyClipboardButton(this), flags);
+    row1->Add(new FilterButton(this, quick_filter), flags);
+    row1->Add(new MenuButton(this, m_menu, get_current_filter), flags);
+    auto row2 = new wxBoxSizer(wxHORIZONTAL);
+    filter_label_box->Show(false);  // the label made the row too wide
+    row2->Add(m_filter_choice, wxSizerFlags(1).Border());
+    auto vbox = new wxBoxSizer(wxVERTICAL);
+    vbox->Add(row1, wxSizerFlags().Expand());
+    vbox->Add(row2, wxSizerFlags().Expand());
+    SetSizer(vbox);
+#else
     auto wbox = new wxWrapSizer(wxHORIZONTAL);
     wbox->Add(m_log_button, flags);
     // Stretching horizontal space. Does not work with a WrapSizer, known
@@ -854,6 +876,7 @@ public:
     wbox->Add(new CloseButton(this, std::move(on_hide)), flags);
 #endif
     SetSizer(wbox);
+#endif
     wxWindow::Layout();
     wxWindow::Show();
 
