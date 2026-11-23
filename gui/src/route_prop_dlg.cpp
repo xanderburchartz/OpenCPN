@@ -256,9 +256,15 @@ RoutePropDlg::RoutePropDlg(wxWindow* parent, wxWindowID id,
       new wxChoice(m_pnlBasic, wxID_ANY, wxDefaultPosition, wxDefaultSize,
                    m_choiceTimezoneNChoices, m_choiceTimezoneChoices, 0);
   m_choiceTimezone->SetSelection(3 /*Honor Global Settings*/);
+#ifndef __OCPN__IOS__  // iOS: "Honor Global Settings" became "Honor Glo"
   m_choiceTimezone->SetMaxSize(wxSize(GetCharWidth() * 12, -1));
+#endif
 
+#ifdef __OCPN__IOS__
+  bSizerTime->Add(m_choiceTimezone, 0, wxALL | wxEXPAND, 5);
+#else
   bSizerTime->Add(m_choiceTimezone, 0, wxALL, 5);
+#endif
 
   wSizerParams->Add(bSizerTime, 1, wxEXPAND, 0);
 

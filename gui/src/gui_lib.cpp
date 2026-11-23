@@ -33,6 +33,14 @@
 #include <wx/textctrl.h>
 #include <wx/utils.h>
 
+#ifdef __OCPN__IOS__
+#include <algorithm>
+#include <wx/button.h>
+#endif
+#ifdef __OCPN__IOS__
+#include "model/ios_hooks.h"
+#endif
+
 #include "gl_headers.h"  // Must come before anything using GL stuff
 
 #include "model/config_vars.h"
@@ -197,6 +205,10 @@ OCPNMessageDialog::OCPNMessageDialog(wxWindow* parent, const wxString& message,
   }
 #endif  // wxUSE_STATBMP
 
+#if defined(__OCPN__IOS__) && wxUSE_STATTEXT
+  ocpnios_AddAlertTitle(this, topsizer, caption);  // iOS: title in the alert
+#endif
+
 #if wxUSE_STATTEXT
   // 2) text
   icon_text->Add(CreateTextSizer(message), 0, wxALIGN_CENTER | wxLEFT, 10);
@@ -205,12 +217,16 @@ OCPNMessageDialog::OCPNMessageDialog(wxWindow* parent, const wxString& message,
 #endif  // wxUSE_STATTEXT
 
   // 3) buttons
+#ifdef __OCPN__IOS__
+  ocpnios_AddAlertButtons(this, topsizer, style);  // iOS alert buttons
+#else
   int AllButtonSizerFlags =
       wxOK | wxCANCEL | wxYES | wxNO | wxHELP | wxNO_DEFAULT;
   int center_flag = wxEXPAND;
   if (style & wxYES_NO) center_flag = wxALIGN_CENTRE;
   wxSizer* sizerBtn = CreateSeparatedButtonSizer(style & AllButtonSizerFlags);
   if (sizerBtn) topsizer->Add(sizerBtn, 0, center_flag | wxALL, 10);
+#endif
 
   SetAutoLayout(true);
   SetSizer(topsizer);
@@ -218,6 +234,16 @@ OCPNMessageDialog::OCPNMessageDialog(wxWindow* parent, const wxString& message,
   topsizer->SetSizeHints(this);
   topsizer->Fit(this);
   wxSize size(GetSize());
+#ifdef __OCPN__IOS__
+  // Width like an iOS alert: ~300 pt, never wider than the screen.
+  {
+    const int w = std::min(340, wxGetDisplaySize().x - 40);
+    if (size.x < w) {
+      size.x = w;
+      SetSize(size);
+    }
+  }
+#endif
   if (size.x < size.y * 3 / 2) {
     size.x = size.y * 3 / 2;
     SetSize(size);

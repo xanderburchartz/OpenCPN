@@ -33,6 +33,9 @@
 #ifdef __ANDROID__
 #include "androidUTIL.h"
 #endif
+#ifdef __OCPN__IOS__
+#include "model/ios_hooks.h"
+#endif
 
 static const char *const kMessage = _(R"(
 OpenCPN is distributed in the hope that it will be useful,
@@ -63,6 +66,10 @@ bool ShowNavWarning(wxWindow *parent) {
   wxString vs = wxString::Format(" .. Version %s", VERSION_FULL);
   androidShowDisclaimer(_("OpenCPN for Android") + vs, kMessage);
   return true;
+}
+#elif defined(__OCPN__IOS__)
+bool ShowNavWarning(wxWindow *parent) {
+  return ocpnios_ShowNavWarning(parent, wxGetTranslation(kMessage));
 }
 #else
 bool ShowNavWarning(wxWindow *parent) {
