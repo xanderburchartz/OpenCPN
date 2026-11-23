@@ -155,11 +155,21 @@ NotificationPanel::NotificationPanel(
   itemBoxSizer01->Add(timetextbox, 0,
                       /*wxEXPAND|*/ wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
+#ifdef __OCPN__IOS__
+  // iOS: on a phone icon, count, time, text and button do not fit side by
+  // side; the text fell off the right edge. Put the text on its own row below
+  // the rest, at full width.
+  PanelHardBreakWrapper wrapper(this, notification->GetMessage(),
+                                GetSize().x - 6 * GetCharWidth());
+  auto textbox = new wxStaticText(this, wxID_ANY, wrapper.GetWrapped());
+  topSizer->Add(textbox, 0, wxLEFT | wxRIGHT | wxBOTTOM, 15);
+#else
   PanelHardBreakWrapper wrapper(this, notification->GetMessage(),
                                 GetSize().x * 50 / 100);
 
   auto textbox = new wxStaticText(this, wxID_ANY, wrapper.GetWrapped());
   itemBoxSizer01->Add(textbox, 0, wxALIGN_CENTER_VERTICAL | wxALL, 10);
+#endif
 
   itemBoxSizer01->AddStretchSpacer();
 
@@ -232,6 +242,11 @@ void NotificationListPanel::ReloadNotificationPanels() {
 
   int panel_size_x = 60 * GetCharWidth();
   panel_size_x = wxMax(panel_size_x, GetParent()->GetClientSize().x);
+#ifdef __OCPN__IOS__
+  // iOS: 60 characters is wider than a phone; the right part (text, OK
+  // button) would be off screen.
+  panel_size_x = GetParent()->GetClientSize().x;
+#endif
   wxSize panel_size = wxSize(panel_size_x, -1);
 
   for (auto notification : notifications) {
@@ -558,6 +573,11 @@ bool NotificationButton::UpdateStatus(bool bnew) {
 void NotificationButton::SetScaleFactor(float factor) {
   ocpnStyle::Style* style = g_StyleManager->GetCurrentStyle();
 
+#ifdef __OCPN__IOS__
+  // iOS: same Retina scale as the compass (ocpnCompass::SetScaleFactor);
+  // otherwise the bell next to the compass is a third of its size.
+  if (g_bopengl) factor *= m_parent->GetContentScaleFactor();
+#endif
   if (factor > 0.1)
     m_scale = factor;
   else

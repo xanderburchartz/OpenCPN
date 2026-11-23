@@ -174,7 +174,11 @@ public:
 #endif
     auto on_clicked = [&](wxCommandEvent& e) { OnClick(e); };
     m_serial_btn->Bind(wxEVT_RADIOBUTTON, on_clicked);
+#ifdef __OCPN__IOS__
+    m_serial_btn->Hide();  // iOS apps have no access to serial ports
+#else
     wbox->Add(m_serial_btn, wxSizerFlags().Border());
+#endif
 
     m_net_btn->Bind(wxEVT_RADIOBUTTON, on_clicked);
     wbox->Add(m_net_btn, wxSizerFlags().Border());
