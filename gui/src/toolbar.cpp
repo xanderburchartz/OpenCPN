@@ -451,17 +451,20 @@ void ocpnFloatingToolbarDialog::SetDefaultPosition() {
     m_position.x = wxMax(m_dock_min_x, m_position.x);
     m_position.y = wxMax(m_dock_min_y, m_position.y);
 #ifdef __OCPN__IOS__
-    // iOS: keep clear of the rounded screen corner (landscape).
+    // iOS: keep clear of the rounded screen corners and the camera housing.
     // Start from the dock position in every orientation: otherwise the
     // landscape position (indented, centered) remained after rotating back to
     // portrait.
-    m_position.x = wxMax(m_dock_min_x, ocpnios_OverlayInsetLeft());
     m_position.y = m_dock_min_y;
     // Landscape: center vertically, so the toolbar always stays clear of the
     // top and bottom corners.
     if (cs.x > cs.y && m_ptoolbar->m_maxHeight > 0 &&
         m_ptoolbar->m_maxHeight < cs.y)
       m_position.y = wxMax(m_dock_min_y, (cs.y - m_ptoolbar->m_maxHeight) / 2);
+    m_position.x =
+        wxMax(m_dock_min_x,
+              ocpnios_OverlayInsetLeft(m_pparent, m_position.y,
+                                       m_position.y + m_ptoolbar->m_maxHeight));
 #endif
 
     m_position.y += m_auxOffsetY;

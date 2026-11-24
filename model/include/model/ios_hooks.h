@@ -71,8 +71,8 @@ wxGridCellRenderer* ocpnios_NewSwitchCellRenderer();
 void ocpnios_NmeaFilterRowLayout(wxPanel* row, wxCheckBox*& checkbox,
                                  wxTextCtrl*& filter_period);
 void ocpnios_OnStartupDone();
-int ocpnios_OverlayInsetLeft();
-int ocpnios_OverlayInsetRight();
+int ocpnios_OverlayInsetLeft(wxWindow* canvas, int top, int bottom);
+int ocpnios_OverlayInsetRight(wxWindow* canvas, int top, int bottom);
 wxColour ocpnios_PluginCardBg();
 wxColour ocpnios_PluginPageBg();
 wxString ocpnios_PluginWrap(wxWindow* win, const wxString& text, int width);
