@@ -6844,9 +6844,6 @@ void ChartCanvas::ScaleBarDraw(ocpnDC &dc) {
     double blat, blon, tlat, tlon;
 
     int x_origin = 5.0 * GetPixPerMM();
-#ifdef __OCPN__IOS__
-    x_origin += ocpnios_OverlayInsetLeft() * m_displayScale;  // rounded corner
-#endif
     int chartbar_height = GetChartbarHeight();
     //         ocpnStyle::Style* style = g_StyleManager->GetCurrentStyle();
     //         if (style->chartStatusWindowTransparent)
@@ -6856,6 +6853,11 @@ void ChartCanvas::ScaleBarDraw(ocpnDC &dc) {
     if (!g_bopengl)
       y_origin =
           m_canvas_height / GetContentScaleFactor() - chartbar_height - 5;
+#endif
+#ifdef __OCPN__IOS__
+    x_origin += ocpnios_OverlayInsetLeft(this, y_origin / m_displayScale - 10,
+                                         y_origin / m_displayScale) *
+                m_displayScale;  // rounded corner
 #endif
 
     GetCanvasPixPoint(x_origin, y_origin, blat, blon);
@@ -13202,10 +13204,6 @@ emboss_data *ChartCanvas::EmbossDepthScale() {
   }
 
   ped->x = (GetVP().pix_width - ped->width);
-#ifdef __OCPN__IOS__
-  // iOS: keep the depth unit ("Meters") clear of the rounded top-right corner.
-  ped->x -= ocpnios_OverlayInsetRight() * m_displayScale;
-#endif
 
   if (m_Compass && m_bShowCompassWin && g_bShowCompassWin) {
     wxRect r = m_Compass->GetRect();
@@ -13213,6 +13211,12 @@ emboss_data *ChartCanvas::EmbossDepthScale() {
   } else {
     ped->y = 40;
   }
+#ifdef __OCPN__IOS__
+  // iOS: keep the depth unit ("Meters") clear of the rounded top-right corner.
+  ped->x -= ocpnios_OverlayInsetRight(this, ped->y / m_displayScale,
+                                      (ped->y + ped->height) / m_displayScale) *
+            m_displayScale;
+#endif
   return ped;
 }
 
@@ -14464,7 +14468,10 @@ void ChartCanvas::UpdateGPSCompassStatusBox(bool b_force_new) {
                      g_StyleManager->GetCurrentStyle()->GetCompassYOffset());
 #ifdef __OCPN__IOS__
   // iOS: keep the compass clear of the rounded top-right screen corner.
-  compass_pt.x -= ocpnios_OverlayInsetRight() * m_displayScale;
+  compass_pt.x -=
+      ocpnios_OverlayInsetRight(this, compass_pt.y / m_displayScale,
+                                (compass_pt.y + rect.height) / m_displayScale) *
+      m_displayScale;
 #endif
   wxRect compass_rect(compass_pt, rect.GetSize());
 

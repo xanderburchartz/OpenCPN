@@ -820,8 +820,10 @@ void Piano::FormatKeys() {
     }
 #ifdef __OCPN__IOS__
     // iOS: keep the chart bar clear of the rounded bottom-left corner.
-    int x0 = ocpnios_OverlayInsetLeft() *
-             (g_bopengl ? m_parentCanvas->GetContentScaleFactor() : 1);
+    const double sf = g_bopengl ? m_parentCanvas->GetContentScaleFactor() : 1;
+    const int ch = m_parentCanvas->GetClientSize().y;
+    int x0 =
+        ocpnios_OverlayInsetLeft(m_parentCanvas, ch - height / sf, ch) * sf;
     for (auto &r : KeyRect) r.x += x0;
     m_width += x0;
 #endif

@@ -1068,11 +1068,11 @@ void MUIBar::SetBestPosition() {
       (m_parentCanvas->GetClientSize().x - (m_size.x + (m_end_margin) * 2.00));
 
   int bottomOffset = 6;
-#ifdef __OCPN__IOS__
-  x -= ocpnios_OverlayInsetRight();  // iOS: rounded bottom-right corner
-#endif
 
   int y = m_parentCanvas->GetClientSize().y - m_size.y - bottomOffset;
+#ifdef __OCPN__IOS__
+  x -= ocpnios_OverlayInsetRight(m_parentCanvas, y, y + m_size.y);  // iOS
+#endif
   // if ( g_bopengl){
   //   y -= m_parentCanvas->GetClientSize().y % 1;
   // }
