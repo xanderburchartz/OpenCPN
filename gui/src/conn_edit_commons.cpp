@@ -57,28 +57,31 @@
 
 namespace conn_edit {
 
-static const std::string kAddressDefaultHelp =
-    _("Enter IP address or hostname");
-static const std::string kAddressUdpHelp =
-    _("IP address or hostname, often 255.255.255.255");
-static const std::string kAddressMcastHelp =
-    _("Group address, usually 224.0.2.0 - 224.0.255.255");
-static const std::string kMcastPortHelp =
-    _("Port number, usually 49152 - 65535");
-static const std::string kTcpDevice = _("Device using TCP");
-static const std::string kUdpReceive = _("Device sending UDP");
-static const std::string kUdpOutput = _("UDP send");
-static const std::string kGpsdDevice = _("Gpsd server");
-static const std::string kSignalkDevice = _("SignalK server");
-static const std::string kTcpClient = _("TCP client");
-static const std::string kUdpSend = _("Device(s) receiving UDP");
-static const std::string kGpsdClient = _("Gpsd client");
-static const std::string kSignalkClient = _("SignalK client");
-static const std::string kTcpServer = _("TCP Server");
-static const std::string kUdpInput = _("UDP Receive");
-static const std::string kUdpInputOutput = _("UDP Receive and Send");
-static const std::string kMulticastServer = _("UDP Multicast Receive and Send");
-static const std::string kMulticastClient = _("UDP Multicast Send");
+// Untranslated keys, translated when shown. Static _() strings would be
+// translated at program start, before the language catalog is loaded.
+static const char* const kAddressDefaultHelp =
+    wxTRANSLATE("Enter IP address or hostname");
+static const char* const kAddressUdpHelp =
+    wxTRANSLATE("IP address or hostname, often 255.255.255.255");
+static const char* const kAddressMcastHelp =
+    wxTRANSLATE("Group address, usually 224.0.2.0 - 224.0.255.255");
+static const char* const kMcastPortHelp =
+    wxTRANSLATE("Port number, usually 49152 - 65535");
+static const char* const kTcpDevice = wxTRANSLATE("Device using TCP");
+static const char* const kUdpReceive = wxTRANSLATE("Device sending UDP");
+static const char* const kUdpOutput = wxTRANSLATE("UDP send");
+static const char* const kGpsdDevice = wxTRANSLATE("Gpsd server");
+static const char* const kSignalkDevice = wxTRANSLATE("SignalK server");
+static const char* const kTcpClient = wxTRANSLATE("TCP client");
+static const char* const kUdpSend = wxTRANSLATE("Device(s) receiving UDP");
+static const char* const kGpsdClient = wxTRANSLATE("Gpsd client");
+static const char* const kSignalkClient = wxTRANSLATE("SignalK client");
+static const char* const kTcpServer = wxTRANSLATE("TCP Server");
+static const char* const kUdpInput = wxTRANSLATE("UDP Receive");
+static const char* const kUdpInputOutput = wxTRANSLATE("UDP Receive and Send");
+static const char* const kMulticastServer =
+    wxTRANSLATE("UDP Multicast Receive and Send");
+static const char* const kMulticastClient = wxTRANSLATE("UDP Multicast Send");
 static const std::string kDefaultGpsdPort = "2947";
 static const std::string kDefaultSignalkPort = "3000";
 
@@ -597,8 +600,8 @@ class NetConfigPanelImpl : public NetConfigPanel {
   public:
     ConnectionTypeChoice(wxWindow* parent, std::function<void()> on_choice)
         : wxChoice(parent, wxID_ANY), m_on_choice(std::move(on_choice)) {
-      for (const auto& view : kBasicNetViews) Append(view);  // FIXME
-      Append(kBasicNetViews[0]);
+      for (const auto& view : kBasicNetViews) Append(_(view.c_str()));  // FIXME
+      Append(_(kBasicNetViews[0].c_str()));
       wxChoice::SetSelection(0);  // until OnConnectionTypeChanged()
       Bind(wxEVT_CHOICE, [&](wxCommandEvent e) {
         m_on_choice();
@@ -614,9 +617,7 @@ class NetConfigPanelImpl : public NetConfigPanel {
   class AddressTextCtrl : public TextCtrlWithHelp, public Reloadable {
   public:
     AddressTextCtrl(wxWindow* parent, ConnectionParams& params)
-        : TextCtrlWithHelp(parent,
-                           "IP address or hostname, often 255.255.255.255"),
-          m_params(params) {
+        : TextCtrlWithHelp(parent, _(kAddressUdpHelp)), m_params(params) {
       AddressTextCtrl::Reload();
       Bind(wxEVT_TEXT, [&](wxCommandEvent& e) {
         m_params.network_address = GetValue();
@@ -637,7 +638,7 @@ class NetConfigPanelImpl : public NetConfigPanel {
 
     void SetClientMode() {
       if (GetValue() == "0.0.0.0") ChangeValue("");
-      if (IsPristine() || GetValue().empty()) SetHelp(kAddressDefaultHelp);
+      if (IsPristine() || GetValue().empty()) SetHelp(_(kAddressDefaultHelp));
       Enable();
     }
 
@@ -647,9 +648,9 @@ class NetConfigPanelImpl : public NetConfigPanel {
       Disable();
     }
 
-    void SetClientMode(const std::string& help) {
+    void SetClientMode(const char* help) {
       SetClientMode();
-      SetHelp(help);
+      SetHelp(_(help));
       if (IsPristine()) RestoreHelp();
     }
 
@@ -688,7 +689,8 @@ class NetConfigPanelImpl : public NetConfigPanel {
           m_on_protocol_change(std::move(on_protocol_change)) {
 
       // Longest help text in address and port:
-      static const wxSize kHelpSize = parent->GetTextExtent(kAddressMcastHelp);
+      static const wxSize kHelpSize =
+          parent->GetTextExtent(_(kAddressMcastHelp));
       AddGrowableCol(1);
       auto flags = wxSizerFlags().Border();
       auto label_flags = wxSizerFlags().Border();
@@ -769,7 +771,7 @@ class NetConfigPanelImpl : public NetConfigPanel {
       m_expert_mode_checkbox->SetValue(is_expert);
       OnExpertModeChange();
 
-      auto item = m_connection_type_choice->FindString(view);
+      auto item = m_connection_type_choice->FindString(_(view.c_str()));
       if (item != wxNOT_FOUND) m_connection_type_choice->SetSelection(item);
       OnConnectionTypeChange();
     }
@@ -792,13 +794,28 @@ class NetConfigPanelImpl : public NetConfigPanel {
     wxStaticText* m_comment_label;
     wxTextCtrl* m_comment_textctrl;
 
+    /**
+     * Return the untranslated view key of the selected connection type.
+     * Uses the index, since translations of two types may be equal.
+     */
+    std::string GetSelectedView() const {
+      const auto& views =
+          m_connection_type_choice->GetCount() == kAdvancedNetViews.size()
+              ? kAdvancedNetViews
+              : kBasicNetViews;
+      int selection = m_connection_type_choice->GetSelection();
+      if (selection < 0 || static_cast<size_t>(selection) >= views.size())
+        return "";
+      return views[selection];
+    }
+
     void OnExpertModeChange() {
       bool is_expert = m_expert_mode_checkbox->GetValue();
       int view = m_connection_type_choice->GetSelection();
       m_connection_type_choice->Clear();
       if (is_expert) {
         for (const auto& choice : kAdvancedNetViews)
-          m_connection_type_choice->Append(choice);
+          m_connection_type_choice->Append(_(choice.c_str()));
         m_connection_type_label->SetLabel(_("Connection type"));
         if (m_comment_label) m_comment_label->Show();
         if (m_comment_textctrl) m_comment_textctrl->Show();
@@ -807,32 +824,27 @@ class NetConfigPanelImpl : public NetConfigPanel {
           if (static_cast<size_t>(view) >= kBasicNetViews.size()) view = 0;
         }
         for (const auto& choice : kBasicNetViews)
-          m_connection_type_choice->Append(choice);
+          m_connection_type_choice->Append(_(choice.c_str()));
         m_connection_type_label->SetLabel(_("Connect to"));
         if (m_comment_label) m_comment_label->Hide();
         if (m_comment_textctrl) m_comment_textctrl->Hide();
       }
       m_connection_type_choice->SetSelection(view);
-      auto view_str =
-          m_connection_type_choice->GetStringSelection().ToStdString();
+      auto view_str = GetSelectedView();
       if (!view_str.empty()) ConfigureControlsForView(view_str);
       m_parent->GetParent()->Layout();
       m_parent->FitInside();
     }
 
     void OnAddressChange(wxFocusEvent& ev) const {
-      int selection = m_connection_type_choice->GetSelection();
-      if (selection != wxNOT_FOUND) {
-        std::string type =
-            m_connection_type_choice->GetString(selection).ToStdString();
-        if (type == kMulticastClient || type == kMulticastServer) {
-          auto address = m_address_textctrl->GetValue().ToStdString();
-          if (!IsAddressMultiCast(address)) {
-            auto dlg =
-                wxMessageDialog(m_parent, _("Illegal multicast address"),
-                                _("OpenCPN warning"), wxOK | wxICON_WARNING);
-            dlg.ShowModal();
-          }
+      std::string type = GetSelectedView();
+      if (type == kMulticastClient || type == kMulticastServer) {
+        auto address = m_address_textctrl->GetValue().ToStdString();
+        if (!IsAddressMultiCast(address)) {
+          auto dlg =
+              wxMessageDialog(m_parent, _("Illegal multicast address"),
+                              _("OpenCPN warning"), wxOK | wxICON_WARNING);
+          dlg.ShowModal();
         }
       }
       ev.Skip();
@@ -843,10 +855,8 @@ class NetConfigPanelImpl : public NetConfigPanel {
       auto p = m_params.data_protocol;
       if (p == DataProtocol::PROTO_SIGNALK || p == DataProtocol::PROTO_GPSD)
         m_params.data_protocol = PROTO_NMEA0183;
-      int selection = m_connection_type_choice->GetSelection();
-      if (selection == wxNOT_FOUND) return;
-      std::string view =
-          m_connection_type_choice->GetStringSelection().ToStdString();
+      std::string view = GetSelectedView();
+      if (view.empty()) return;
       if (view == kTcpDevice || view == kTcpClient || view == kTcpServer) {
         m_params.net_protocol = NetworkProtocol::TCP;
       } else if (view == kSignalkClient || view == kSignalkDevice) {
@@ -926,7 +936,8 @@ class NetConfigPanelImpl : public NetConfigPanel {
       if (view == kTcpDevice || view == kTcpClient) {
         m_address_label->Show();
         m_address_textctrl->SetClientMode();
-        if (m_port_textctrl->IsPristine()) m_port_textctrl->SetHelp(kPortHelp);
+        if (m_port_textctrl->IsPristine())
+          m_port_textctrl->SetHelp(_(kPortHelp));
         m_in_out_panel->EnableInput(true);
         m_in_out_panel->EnableOutput(true);
       } else if (view == kUdpReceive || view == kUdpInput ||
@@ -934,7 +945,8 @@ class NetConfigPanelImpl : public NetConfigPanel {
         m_address_label->Show(view == kUdpInputOutput);
         if (view != kUdpInputOutput) m_address_textctrl->SetServerMode();
         m_address_textctrl->Show(view == kUdpInputOutput);
-        if (m_port_textctrl->IsPristine()) m_port_textctrl->SetHelp(kPortHelp);
+        if (m_port_textctrl->IsPristine())
+          m_port_textctrl->SetHelp(_(kPortHelp));
         m_in_out_panel->SetOutput(view == kUdpInputOutput);
         m_in_out_panel->SetInput(true);
       } else if (view == kUdpSend || view == kUdpOutput) {
@@ -969,12 +981,12 @@ class NetConfigPanelImpl : public NetConfigPanel {
       } else if (view == kMulticastClient || view == kMulticastServer) {
         auto address = m_address_textctrl->GetValue();
         if (address.empty() || address == "0.0.0.0")
-          m_address_textctrl->SetHelp(kAddressMcastHelp);
+          m_address_textctrl->SetHelp(_(kAddressMcastHelp));
         m_address_label->SetLabel(_("Multicast group"));
         if (m_port_textctrl->IsPristine())
-          m_port_textctrl->SetHelp(kMcastPortHelp);
+          m_port_textctrl->SetHelp(_(kMcastPortHelp));
         if (m_address_textctrl->IsPristine())
-          m_address_textctrl->SetHelp(kAddressMcastHelp);
+          m_address_textctrl->SetHelp(_(kAddressMcastHelp));
         if (view == kMulticastClient) {
           m_in_out_panel->SetInput(false);
           m_in_out_panel->SetOutput(true);

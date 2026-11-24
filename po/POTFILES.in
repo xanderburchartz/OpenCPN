@@ -258,6 +258,7 @@ gui/include/gui/color_handler.h
 gui/include/gui/compass.h
 gui/include/gui/concanv.h
 gui/include/gui/config_mgr.h
+gui/include/gui/conn_edit_commons.h
 gui/include/gui/connection_edit.h
 gui/include/gui/connections_dlg.h
 gui/include/gui/conn_params_panel.h
@@ -403,6 +404,7 @@ gui/src/color_handler.cpp
 gui/src/compass.cpp
 gui/src/concanv.cpp
 gui/src/config_mgr.cpp
+gui/src/conn_edit_commons.cpp
 gui/src/connection_edit.cpp
 gui/src/connections_dlg.cpp
 gui/src/conn_params_panel.cpp

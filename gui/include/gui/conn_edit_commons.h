@@ -56,8 +56,8 @@ T* FindParentOfType(wxWindow* w) {
   return nullptr;
 }
 
-static const std::string kPortHelp =
-    _("Port number (1025 - 65535, often 10110)");
+static const char* const kPortHelp =
+    wxTRANSLATE("Port number (1025 - 65535, often 10110)");
 
 /**
  * Interface implemented by widgets reflecting a ConnectionParams
@@ -106,7 +106,7 @@ public:
 
 protected:
   explicit PortTextCtrl(wxWindow* parent)
-      : TextCtrlWithHelp(parent, kPortHelp) {}
+      : TextCtrlWithHelp(parent, _(kPortHelp)) {}
 };
 
 /** Configure n0183 input and output filters. */
