@@ -26,6 +26,10 @@
 #ifdef __OCPN__IOS__
 #include <QLineEdit>
 #include <QWidget>
+#include <map>
+// iOS: the name of each data switch as a label on the left of its row; the
+// switch itself (without text) after the values, as in an iOS list.
+static std::map<wxControl *, wxStaticText *> s_iosSwitchNames;
 #endif
 
 extern int m_Altitude;
@@ -124,11 +128,26 @@ void CursorData::AddTrackingControl(wxControl *ctrl1, wxControl *ctrl2,
                                     int wctrl3_4) {
   if (show) {
 #ifdef __OCPN__IOS__
-    // iOS: align switch and values on one line; the values sat at the top of
-    // the row and the 31 pt switch lower. Same layout, vertically centered,
-    // switch on the sheet margin.
-    m_fgTrackingControls->Add(
-        ctrl1, 0, wxALIGN_CENTER_VERTICAL | wxLEFT | wxTOP | wxBOTTOM, 16);
+    // iOS: one row per value as in an iOS list: the name on the left, then
+    // the values, then the switch (it had the switch on the left and its text
+    // on the right). Vertically centered on one line.
+    wxStaticText *name = nullptr;
+    if (!vertical) {
+      auto it = s_iosSwitchNames.find(ctrl1);
+      if (it == s_iosSwitchNames.end()) {
+        name = new wxStaticText(ctrl1->GetParent(), wxID_ANY, ctrl1->GetLabel());
+        ctrl1->SetLabel(wxEmptyString);
+        s_iosSwitchNames[ctrl1] = name;
+      } else {
+        name = it->second;
+      }
+      m_fgTrackingControls->Add(name, 0,
+                                wxALIGN_CENTER_VERTICAL | wxLEFT | wxTOP | wxBOTTOM, 16);
+      name->Show();
+    } else {
+      m_fgTrackingControls->Add(
+          ctrl1, 0, wxALIGN_CENTER_VERTICAL | wxLEFT | wxTOP | wxBOTTOM, 16);
+    }
     ctrl1->Show();
     for (wxControl *c : {ctrl2, ctrl3, ctrl4}) {
       if (!c) continue;
@@ -152,6 +171,9 @@ void CursorData::AddTrackingControl(wxControl *ctrl1, wxControl *ctrl2,
       m_fgTrackingControls->Add(ctrl4, 0, wxALIGN_CENTER_VERTICAL, 0);
     else if (!vertical)
       m_fgTrackingControls->Add(0, 0, 1, wxALL, 1);
+    if (name)
+      m_fgTrackingControls->Add(ctrl1, 0,
+                                wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT | wxRIGHT, 16);
     return;
 #endif
     m_fgTrackingControls->Add(ctrl1, 0, wxALL, 1);
@@ -195,7 +217,12 @@ void CursorData::PopulateTrackingControls(bool vertical) {
     // the dialog sizer in an outer sizer for the header bar, so the C cast
     // below found no grid and chose 12 columns: the cursor data ended up in one
     // row wider than an iPhone.
-    m_fgTrackingControls->SetCols(4);
+    // Five columns: name, three values, switch. The name column takes any
+    // spare width, so the switches line up in one column.
+    m_fgTrackingControls->SetCols(5);
+    if (!m_fgTrackingControls->IsColGrowable(0))
+      m_fgTrackingControls->AddGrowableCol(0);
+    for (auto &n : s_iosSwitchNames) n.second->Hide();  // shown again if added
 #else
     auto *ps = (wxFlexGridSizer *)(m_gparent.GetSizer());
     if (ps && (ps->GetCols() == 1))
