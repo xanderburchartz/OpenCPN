@@ -2415,6 +2415,13 @@ void ChartCanvas::SetDisplaySizeMM(double size) {
 
   m_pix_per_mm = (horizontal) / ((double)m_display_size_mm);
   m_canvas_scale_factor = (horizontal) / (m_display_size_mm / 1000.);
+#if defined(ocpnUSE_GL) && (defined(__WXOSX__) || defined(__OCPN__IOS__))
+  // With OpenGL on a HiDPI display the canvas works in physical pixels, while
+  // getDisplaySize() gives logical pixels. Use physical pixels here too, so
+  // that chart_scale (chart selection, SCAMIN, zoom limits) is the true scale
+  // (#3117).
+  if (g_bopengl) m_canvas_scale_factor *= GetContentScaleFactor();
+#endif
 
   if (ps52plib) {
     ps52plib->SetDisplayWidth(g_monitor_info[g_current_monitor].width);
@@ -5941,24 +5948,10 @@ bool ChartCanvas::SetViewPoint(double lat, double lon, double scale_ppm,
     else if (VPoint.chart_scale <= 100000.)
       round_factor = 1000.;
 
-    // Fixme: Workaround the wrongly calculated scale on Retina displays (#3117)
-    double retina_coef = 1;
-#ifdef ocpnUSE_GL
-#ifdef __WXOSX__
-    if (g_bopengl) {
-      retina_coef = GetContentScaleFactor();
-    }
-#endif
-#endif
-
     // The chart scale denominator (e.g., 50000 if the scale is 1:50000),
     // rounded to the nearest 10, 100 or 1000.
-    //
-    // @todo: on MacOS there is 2x ratio between VPoint.chart_scale and
-    // true_scale_display. That does not make sense. The chart scale should be
-    // the same as the true scale within the limits of the rounding factor.
     double true_scale_display =
-        wxRound(VPoint.chart_scale / round_factor) * round_factor * retina_coef;
+        wxRound(VPoint.chart_scale / round_factor) * round_factor;
     wxString text;
 
     m_displayed_scale_factor = VPoint.ref_scale / VPoint.chart_scale;
