@@ -5792,6 +5792,23 @@ void DashboardWindow::OnSize(wxSizeEvent &event) {
   Refresh();
   //  Capture the user adjusted docked Dashboard size
   this->m_Container->m_best_size = event.GetSize();
+#ifdef __OCPN__IOS__
+  // The floating frame was sized from IosNaturalMinSize; the instruments sized
+  // here for the actual width can need less height (with 11 pt titles the
+  // compass came out smaller), and the rest of the frame stayed black. Fit the
+  // frame to what the instruments now need, once per size.
+  static bool busy = false;
+  const wxSize need = itemBoxSizer->GetMinSize();
+  wxWindow *frame = GetParent();
+  // The frame, not this window: at startup with the pane restored, the window had
+  // its height and the frame below it stayed black.
+  if (!busy && frame && frame->IsTopLevel() && need.y > 0 &&
+      abs(frame->GetClientSize().y - need.y) > 2) {
+    busy = true;
+    frame->SetClientSize(wxSize(frame->GetClientSize().x, need.y));
+    busy = false;
+  }
+#endif
 }
 
 void DashboardWindow::OnContextMenu(wxContextMenuEvent &event) {
@@ -5944,11 +5961,18 @@ wxSize DashboardWindow::IosNaturalMinSize() {
   // minimum size to the client width, and the compass is as tall as it is wide.
   // With a saved width of 240 the pane stayed 240 wide and GNSS Status was cut
   // off. So recompute from the default width, as SetInstrumentList does.
+  // First the widest an instrument needs, then every instrument for that width,
+  // as OnSize does for the actual width; chained hints gave a taller pane than
+  // OnSize later laid out, and the rest of the frame stayed black.
   wxSize hint(DefaultWidth, DefaultWidth);
   for (unsigned int i = 0; i < m_ArrayOfInstrument.size(); i++) {
     DashboardInstrument *inst = m_ArrayOfInstrument.Item(i)->m_pInstrument;
+    hint.x = wxMax(hint.x, inst->GetSize(itemBoxSizer->GetOrientation(), hint).x);
+  }
+  hint.y = hint.x;
+  for (unsigned int i = 0; i < m_ArrayOfInstrument.size(); i++) {
+    DashboardInstrument *inst = m_ArrayOfInstrument.Item(i)->m_pInstrument;
     inst->SetMinSize(inst->GetSize(itemBoxSizer->GetOrientation(), hint));
-    hint = inst->GetMinSize();
   }
   SetMinSize(wxDefaultSize);
   Fit();

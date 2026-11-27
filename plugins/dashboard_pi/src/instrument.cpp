@@ -123,6 +123,9 @@ wxColour GetColourSchemeFont(wxColour co) {
 const int kIosTitlePad = 3;
 
 static wxFont IosTitleFont(wxFont f) {
+  // At least 11 pt: the 10 pt default was too small to read on a phone in a
+  // moving boat. A larger size chosen by the user is kept.
+  if (f.GetPointSize() < 11) f.SetPointSize(11);
   if (f.GetStyle() == wxFONTSTYLE_ITALIC) f.SetStyle(wxFONTSTYLE_NORMAL);
   if (f.GetWeight() < wxFONTWEIGHT_SEMIBOLD) f.SetWeight(wxFONTWEIGHT_SEMIBOLD);
   return f;
