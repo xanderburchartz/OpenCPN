@@ -122,6 +122,7 @@ private:
 
   wxListCtrl *m_tList;
   bool btc_valid;
+  wxRect m_tc_valid_rect;  ///< Graph rectangle the cached plot was computed for
   ChartCanvas *pParent;
   int m_stationOffset_mins;
   int m_diff_mins;

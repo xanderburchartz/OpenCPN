@@ -430,6 +430,10 @@ void TCWin::PaintChart(wxDC &dc, const wxRect &chartRect) {
     return;
   }
 
+  // The plot is cached in graph coordinates; compute it again when the chart
+  // panel got another size without a size event on this window.
+  if (m_graph_rect != m_tc_valid_rect) btc_valid = false;
+
   // Get client size for positioning date/timezone text below chart
   int x, y;
   GetClientSize(&x, &y);
@@ -714,6 +718,7 @@ void TCWin::PaintChart(wxDC &dc, const wxRect &chartRect) {
     }
 
     btc_valid = true;
+    m_tc_valid_rect = m_graph_rect;
   }
 
   // Graph legend
