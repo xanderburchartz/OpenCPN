@@ -289,14 +289,14 @@ void TCWin::CreateLayout() {
       new wxTextCtrl(m_topPanel, -1, "", wxDefaultPosition, wxDefaultSize,
                      wxTE_MULTILINE | wxTE_READONLY | wxTE_DONTWRAP);
   m_ptextctrl->SetMinSize(wxSize(0, 8 * m_refTextHeight));
-  topSizer->Add(m_ptextctrl, 60, wxALL, 5);  // 2/3 of width
+  topSizer->Add(m_ptextctrl, 60, wxEXPAND | wxALL, 5);  // 2/3 of width
 
   // Right cell: Tide list (LW/HW) with minimum size
   m_tList = new wxListCtrl(m_topPanel, -1, wxDefaultPosition, wxDefaultSize,
                            wxLC_REPORT | wxLC_NO_HEADER);
   m_tList->SetMinSize(
       wxSize(0, 8 * m_refTextHeight));   // Minimum to show a few entries
-  topSizer->Add(m_tList, 40, wxALL, 5);  // 1/3 of width
+  topSizer->Add(m_tList, 40, wxEXPAND | wxALL, 5);  // 1/3 of width
 
   // Add first column to tide list
   wxListItem col0;
