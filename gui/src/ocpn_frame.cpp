@@ -5513,9 +5513,12 @@ void MyFrame::OnFrameTenHzTimer(wxTimerEvent &event) {
         gLon = gLon_gt + asin(sa * sD / cy) * 180 / M_PI;
         gLat = asin(sy * cD + cy * sD * ca) * 180 / M_PI;
       }
-    }
 
-    b_update = true;
+      // Only with a valid course and speed is there own ship motion to show.
+      // Without, a full canvas refresh every 100 ms changed nothing on screen
+      // and kept the CPU busy.
+      b_update = true;
+    }
   }
 
   // In a valid rotation mode ?
